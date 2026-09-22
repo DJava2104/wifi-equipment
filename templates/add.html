@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Расчет — Wi-Fi Speed Calculator</title>
+    <link rel="stylesheet" href="/static/css/style.css">
+</head>
+<body class="app-body">
+
+    <div class="phone">
+        <header class="screen-header">
+            <h1>Вычисление</h1>
+        </header>
+
+        <main class="screen-scroll">
+            <div class="calc-columns">
+                <section class="form-group">
+                    <h2>Оборудование</h2>
+                    <label class="upload-box">
+                        <div class="upload-placeholder">+</div>
+                        <span>Фото устройства</span>
+                        <input type="file" accept="image/*">
+                    </label>
+                    <label class="upload-box">
+                        <div class="upload-placeholder">+</div>
+                        <span>Видеообзор</span>
+                        <input type="file" accept="video/*">
+                    </label>
+                </section>
+
+                <section class="form-group">
+                    <h2>Параметры расчета</h2>
+
+                    <label class="field">
+                        <span>Модель оборудования</span>
+                        <select>
+                            {% for e in equipment_list %}
+                            <option value="{{ e.id }}">{{ e.title }}</option>
+                            {% endfor %}
+                        </select>
+                    </label>
+
+                    <label class="field">
+                        <span>Расстояние до точки доступа (м)</span>
+                        <input type="number" min="0" step="1" placeholder="10">
+                    </label>
+
+                    <label class="field">
+                        <span>Уровень помех (dBm)</span>
+                        <input type="number" placeholder="-75">
+                    </label>
+
+                    <label class="field">
+                        <span>Протокол Wi-Fi</span>
+                        <select>
+                            <option value="wifi4">Wi-Fi 4 (802.11n)</option>
+                            <option value="wifi5">Wi-Fi 5 (802.11ac)</option>
+                            <option value="wifi6" selected>Wi-Fi 6 (802.11ax)</option>
+                            <option value="wifi7">Wi-Fi 7 (802.11be)</option>
+                        </select>
+                    </label>
+
+                    <label class="field">
+                        <span>Количество подключенных устройств</span>
+                        <input type="number" min="1" step="1" placeholder="5">
+                    </label>
+                </section>
+            </div>
+
+            <button class="btn-calculate" disabled>Рассчитать</button>
+        </main>
+
+        <nav class="bottom-nav">
+            <a href="/feed/1" class="nav-tab">📱 Лента</a>
+            <a href="/add" class="nav-tab">➕ Добавление</a>
+            <a href="/grid" class="nav-tab">📒 Плитка</a>
+        </nav>
+    </div>
+
+</body>
+</html>

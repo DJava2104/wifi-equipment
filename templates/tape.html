@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Лента — Wi-Fi Speed Calculator</title>
+    <link rel="stylesheet" href="/static/css/style.css">
+</head>
+<body class="app-body">
+
+    <div class="phone">
+        <header class="screen-header">
+            <h1>Телеметрия</h1>
+        </header>
+        <div class="feed-screen">
+            <div class="feed-media">
+                <img src="{{ equipment.image_url }}" alt="{{ equipment.title }}" class="feed-img">
+                <video autoplay loop muted playsinline>
+                    <source src="{{ equipment.video_url }}" type="video/mp4">
+                </video>
+            </div>
+
+            <div class="feed-gradient"></div>
+
+            <div class="feed-overlay">
+                <span class="equip-badge">{{ equipment.standard }}</span>
+                <h1 class="feed-title">{{ equipment.title }}</h1>
+                <p class="feed-speed">{{ equipment.max_speed }} Мбит/с</p>
+                <p class="feed-meta">{{ equipment.band }}</p>
+                <p class="feed-meta">{{ equipment.antennas }}</p>
+            </div>
+
+            <div class="feed-actions">
+                <a href="/feed/{{ next_equipment.id }}" class="btn-next">➡️</a>
+                <span class="like-btn">♥️{{ equipment.likes }}</span>
+            </div>
+        </div>
+
+        <nav class="bottom-nav">
+            <a href="/feed/1" class="nav-tab">📱 Лента</a>
+            <a href="/add" class="nav-tab">➕ Добавление</a>
+            <a href="/grid" class="nav-tab">📒 Плитка</a>
+        </nav>
+    </div>
+
+</body>
+</html>

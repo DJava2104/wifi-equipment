@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Список — Wi-Fi Speed Calculator</title>
+    <link rel="stylesheet" href="/static/css/style.css">
+</head>
+<body class="app-body">
+
+    <div class="phone">
+        <header class="screen-header">
+            <h1>Оборудование</h1>
+        </header>
+
+        <main class="screen-scroll">
+            <form method="get" action="/grid">
+                <input type="number" name="speed_min" id="speed-filter" class="search-input"
+                       placeholder="Фильтр по скорости > 1000 Мбит/с" min="0">
+            </form>
+
+            {% set min_speed = request.query_params.get('speed_min') | int %}
+            <div class="eq-grid" id="eq-grid">
+                {% for e in equipment_list %}
+                {% if min_speed == 0 or e.max_speed > min_speed %}
+                <a href="/feed/{{ e.id }}" class="eq-card" data-speed="{{ e.max_speed }}">
+                    <img src="{{ e.image_url }}" alt="{{ e.title }}" class="eq-card-img">
+                    <h3 class="eq-card-title">{{ e.title }}</h3>
+                    <p class="eq-standard">{{ e.standard }}</p>
+                    <p class="eq-card-likes">♥️{{ e.likes }}</p>
+                    <p class="eq-card-speed">{{ e.max_speed }} Мбит/с</p>
+                </a>
+                {% endif %}
+                {% endfor %}
+            </div>
+        </main>
+
+        <nav class="bottom-nav">
+            <a href="/feed/1" class="nav-tab">📱 Лента</a>
+            <a href="/add" class="nav-tab">➕ Добавление</a>
+            <a href="/grid" class="nav-tab">📒 Плитка</a>
+        </nav>
+    </div>
+
+</body>
+</html>
