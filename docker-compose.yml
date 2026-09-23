@@ -13,8 +13,27 @@ services:
       - minio-data:/data
     command: server /data --console-address ":9001"
 
+  postgres:
+    image: postgres:15-alpine
+    environment:
+      POSTGRES_USER: djava
+      POSTGRES_PASSWORD: java2004
+      POSTGRES_DB: equipment_db
+    ports:
+      - "5433:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+
+  adminer:
+    image: adminer:latest
+    ports:
+      - "8081:8080"
+    depends_on:
+      - postgres
+
 volumes:
   minio-data:
+  postgres_data:
 
 # Запуск MiniO
 # docker run -d --name minio_storage -p 9000:9000 -p 9001:9001 -e MINIO_ROOT_USER=root -e MINIO_ROOT_PASSWORD=rootpassword -v minio_data:/data minio/minio server /data --console-address ":9001"
