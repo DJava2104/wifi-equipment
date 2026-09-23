@@ -14,24 +14,31 @@
         </header>
         <div class="feed-screen">
             <div class="feed-media">
-                <img src="{{ equipment.image_url }}" alt="{{ equipment.title }}" class="feed-img">
-                <video autoplay loop muted playsinline>
-                    <source src="{{ equipment.video_url }}" type="video/mp4">
+                {% set img_src = equipment.image_url if equipment.image_url else '/static/img/default.svg' %}
+                {% set video_src = equipment.video_url if equipment.video_url else '/static/img/default.mp4' %}
+                <img class="feed-img"
+                     src="{{ img_src }}"
+                     alt="{{ equipment.title }}"
+                     onerror="this.onerror=null; this.src='/static/img/default.svg';">
+                <video autoplay loop muted playsinline
+                       onerror="this.querySelector('source').src='/static/img/default.mp4'; this.load();">
+                    <source src="{{ video_src }}" type="video/mp4">
                 </video>
             </div>
 
             <div class="feed-gradient"></div>
 
             <div class="feed-overlay">
-                <span class="equip-badge">{{ equipment.standard }}</span>
+                <span class="equip-badge">{{ equipment.standard or 'Wi-Fi' }}</span>
                 <h1 class="feed-title">{{ equipment.title }}</h1>
-                <p class="feed-speed">{{ equipment.max_speed }} Мбит/с</p>
-                <p class="feed-meta">{{ equipment.band }}</p>
-                <p class="feed-meta">{{ equipment.antennas }}</p>
+                <p class="feed-speed">{{ equipment.max_speed or '—' }} Мбит/с</p>
+                <p class="feed-meta">Диапазон: {{ equipment.band or '—' }}</p>
+                <p class="feed-meta">Антенны: {{ equipment.antennas or '—' }}</p>
+                {% if equipment.description %}<p class="feed-meta">{{ equipment.description }}</p>{% endif %}
             </div>
 
             <div class="feed-actions">
-                <a href="/feed/{{ next_equipment.id }}" class="btn-next">➡️</a>
+                <a href="/feed/{{ next_equipment.id_equipment }}" class="btn-next">➡️</a>
                 <span class="like-btn">♥️{{ equipment.likes }}</span>
             </div>
         </div>

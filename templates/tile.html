@@ -15,22 +15,29 @@
 
         <main class="screen-scroll">
             <form method="get" action="/grid">
-                <input type="number" name="speed_min" id="speed-filter" class="search-input"
-                       placeholder="Фильтр по скорости > 1000 Мбит/с" min="0">
+                <input type="text" name="search" class="search-input"
+                       placeholder="Поиск по названию" value="{{ search }}">
             </form>
 
-            {% set min_speed = request.query_params.get('speed_min') | int %}
             <div class="eq-grid" id="eq-grid">
                 {% for e in equipment_list %}
-                {% if min_speed == 0 or e.max_speed > min_speed %}
-                <a href="/feed/{{ e.id }}" class="eq-card" data-speed="{{ e.max_speed }}">
-                    <img src="{{ e.image_url }}" alt="{{ e.title }}" class="eq-card-img">
-                    <h3 class="eq-card-title">{{ e.title }}</h3>
-                    <p class="eq-standard">{{ e.standard }}</p>
-                    <p class="eq-card-likes">♥️{{ e.likes }}</p>
-                    <p class="eq-card-speed">{{ e.max_speed }} Мбит/с</p>
-                </a>
-                {% endif %}
+                <div class="eq-card-wrap">
+                    <a href="/feed/{{ e.id_equipment }}" class="eq-card">
+                        {% set card_img = e.image_url if e.image_url else '/static/img/default.svg' %}
+                        <img src="{{ card_img }}" alt="{{ e.title }}" class="eq-card-img"
+                             onerror="this.onerror=null; this.src='/static/img/default.svg';">
+                        <h3 class="eq-card-title">{{ e.title }}</h3>
+                        <p class="eq-standard">{{ e.standard or '—' }}</p>
+                        <p class="eq-card-likes">♥️{{ likes_map.get(e.id_equipment, 0) }}</p>
+                        <p class="eq-card-speed">{{ e.max_speed or '—' }} Мбит/с</p>
+                    </a>
+                    <form method="post" action="/equipment/{{ e.id_equipment }}/delete"
+                          onsubmit="return confirm('Логически удалить услугу?');">
+                        <button type="submit" class="delete-btn">Удалить</button>
+                    </form>
+                </div>
+                {% else %}
+                <p class="empty-hint">Услуги не найдены</p>
                 {% endfor %}
             </div>
         </main>
