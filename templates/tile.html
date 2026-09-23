@@ -14,10 +14,14 @@
         </header>
 
         <main class="screen-scroll">
-            <form method="get" action="/grid">
-                <input type="text" name="search" class="search-input"
-                       placeholder="Поиск по названию" value="{{ search }}">
+            <form method="get" action="/grid" class="search">
+                <div class="slider-block">
+                    <input type="range" name="freq_min" class="range-slider" min="0" max="10" step="0.1" value="{{ freq_min }}" />
+                    <input type="range" name="freq_max" class="range-slider" min="0" max="10" step="0.1" value="{{ freq_max }}" />
+                </div>
+                <button class="btn search-btn">🔎 Найти</button>
             </form>
+            <p class="filter-result">Результат поиска: от {{ freq_min }} до {{ freq_max }} ГГц</p>
 
             <div class="eq-grid" id="eq-grid">
                 {% for e in equipment_list %}

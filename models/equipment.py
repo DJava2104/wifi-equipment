@@ -1,4 +1,4 @@
-from sqlalchemy import Column, Integer, String, Text, TIMESTAMP, func
+from sqlalchemy import Column, Integer, String, Text, TIMESTAMP, Float, func
 from db.base import Base
 
 class Equipment(Base):
@@ -10,6 +10,7 @@ class Equipment(Base):
     max_speed = Column(Integer, nullable=True)
     band = Column(String(20), nullable=True)
     antennas = Column(String(30), nullable=True)
+    frequency = Column(Float, nullable=True)
     image_url = Column(String(255), nullable=True)
     video_url = Column(String(255), nullable=True)
     description = Column(Text, nullable=True)

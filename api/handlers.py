@@ -1,6 +1,6 @@
 from datetime import datetime
 
-from fastapi import APIRouter, Request, Depends, Form, HTTPException
+from fastapi import APIRouter, Request, Depends, Form, Query, HTTPException
 from fastapi.responses import RedirectResponse
 from fastapi.templating import Jinja2Templates
 from sqlalchemy import select, text, func
@@ -75,10 +75,17 @@ async def get_feed_item(request: Request, eq_id: int, db: AsyncSession = Depends
 
 
 @router.get("/grid")
-async def get_grid(request: Request, search: str = "", db: AsyncSession = Depends(get_db)):
+async def get_grid(
+    request: Request,
+    freq_min: float | None = Query(None),
+    freq_max: float | None = Query(None),
+    db: AsyncSession = Depends(get_db),
+):
     stmt = select(Equipment).where(Equipment.status != "удален")
-    if search:
-        stmt = stmt.where(Equipment.title.ilike(f"%{search}%"))
+    if freq_min is not None:
+        stmt = stmt.where(Equipment.frequency >= freq_min)
+    if freq_max is not None:
+        stmt = stmt.where(Equipment.frequency <= freq_max)
     stmt = stmt.order_by(Equipment.id_equipment)
 
     result = await db.execute(stmt)
@@ -92,7 +99,12 @@ async def get_grid(request: Request, search: str = "", db: AsyncSession = Depend
     return templates.TemplateResponse(
         request=request,
         name="tile.html",
-        context={"equipment_list": equipment_list, "likes_map": likes_map, "search": search},
+        context={
+            "equipment_list": equipment_list,
+            "likes_map": likes_map,
+            "freq_min": freq_min if freq_min is not None else 0,
+            "freq_max": freq_max if freq_max is not None else 10,
+        },
     )
 
 
@@ -128,6 +140,7 @@ async def publish_draft(
     description: str = Form(...),
     standard: str = Form(...),
     max_speed: int = Form(...),
+    frequency: float = Form(...),
     db: AsyncSession = Depends(get_db),
 ):
     draft = await get_draft(CURRENT_USER, db)
@@ -135,6 +148,8 @@ async def publish_draft(
         draft.description = description
         draft.standard = standard
         draft.max_speed = max_speed
+        draft.frequency = frequency
+        draft.band = f"{frequency} ГГц"
         draft.status = "опубликован"
         draft.date_formed = datetime.now()
         await db.commit()

@@ -17,6 +17,8 @@
                         <input type="number" name="max_speed" value="{{ draft.max_speed }}" placeholder="Скорость">
                         <p>Стандарт Wi-Fi</p>
                         <input type="text" name="standard" value="{{ draft.standard }}" placeholder="Wi-Fi 6 (802.11ax)">
+                        <p>Частота (ГГц)</p>
+                        <input type="number" step="0.1" min="0" name="frequency" value="{{ draft.frequency }}" placeholder="5.0">
                         <p>Описание</p>
                         <textarea name="description" rows="4" placeholder="Описание">{{ draft.description }}</textarea>
                     </div>
