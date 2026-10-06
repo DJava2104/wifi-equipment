@@ -12,32 +12,56 @@
         <header class="screen-header">
             <h1>Телеметрия</h1>
         </header>
+
         <div class="feed-screen">
-            <div class="feed-media">
-                <img src="{{ equipment.image_url }}" alt="{{ equipment.title }}" class="feed-img">
-                <video autoplay loop muted playsinline>
-                    <source src="{{ equipment.video_url }}" type="video/mp4">
-                </video>
-            </div>
+            <div class="feed-card">
+                <div class="feed-media">
+                    <img class="feed-img"
+                         src="{{ equipment.image_url or '/static/img/default.svg' }}"
+                         alt="{{ equipment.title }}">
+                    <video autoplay loop muted playsinline
+                           poster="{{ equipment.image_url or '/static/img/default.svg' }}">
+                        <source src="{{ equipment.video_url or '/static/img/default.mp4' }}" type="video/mp4">
+                    </video>
+                </div>
 
-            <div class="feed-gradient"></div>
+                <div class="feed-gradient"></div>
 
-            <div class="feed-overlay">
-                <span class="equip-badge">{{ equipment.standard }}</span>
-                <h1 class="feed-title">{{ equipment.title }}</h1>
-                <p class="feed-speed">{{ equipment.max_speed }} Мбит/с</p>
-                <p class="feed-meta">{{ equipment.band }}</p>
-                <p class="feed-meta">{{ equipment.antennas }}</p>
-            </div>
+                <div class="feed-bottom">
+                    <div class="feed-side">
+                        <div class="stat">
+                            <span class="stat-label">Макс. скорость</span>
+                            <span class="stat-value stat-speed">{{ equipment.max_speed }} Мбит/с</span>
+                        </div>
+                        <div class="stat">
+                            <span class="stat-label">Диапазон</span>
+                            <span class="stat-value">{{ equipment.band | ghz }}</span>
+                        </div>
+                        <div class="stat">
+                            <span class="stat-label">Антенны</span>
+                            <span class="stat-value">{{ equipment.antennas | antennas }}</span>
+                        </div>
 
-            <div class="feed-actions">
-                <a href="/feed/{{ next_equipment.id }}" class="btn-next">➡️</a>
-                <span class="like-btn">♥️{{ equipment.likes }}</span>
+                        <div class="feed-actions" style="display:flex;flex-direction:column;align-items:flex-end;gap:8px">
+                            <a href="/feed/{{ equipment.id }}?next=true" class="btn-next" title="Следующее оборудование">➡️</a>
+                            <span class="like-btn">♥️{{ equipment.like_count }}</span>
+                        </div>
+                    </div>
+
+                    <div class="feed-info">
+                        <h2 class="feed-title">{{ equipment.title }}</h2>
+                        <p class="feed-standard">{{ equipment.standard }}</p>
+                        <input type="checkbox" id="desc-toggle" class="desc-toggle-input">
+                        <p class="feed-desc-text">{{ equipment.description }}</p>
+                        <label for="desc-toggle" class="desc-toggle-label desc-toggle-more">Еще</label>
+                        <label for="desc-toggle" class="desc-toggle-label desc-toggle-less">Свернуть</label>
+                    </div>
+                </div>
             </div>
         </div>
 
         <nav class="bottom-nav">
-            <a href="/feed/1" class="nav-tab">📱 Лента</a>
+            <a href="/feed" class="nav-tab nav-active">📱 Лента</a>
             <a href="/add" class="nav-tab">➕ Добавление</a>
             <a href="/grid" class="nav-tab">📒 Плитка</a>
         </nav>

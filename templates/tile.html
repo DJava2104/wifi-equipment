@@ -3,40 +3,53 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Список — Wi-Fi Speed Calculator</title>
+    <title>Плитка — Wi-Fi Speed Calculator</title>
     <link rel="stylesheet" href="/static/css/style.css">
 </head>
 <body class="app-body">
 
     <div class="phone">
         <header class="screen-header">
-            <h1>Оборудование</h1>
+            <h1>Плитка</h1>
         </header>
 
         <main class="screen-scroll">
-            <form method="get" action="/grid">
-                <input type="number" name="speed_min" id="speed-filter" class="search-input"
-                       placeholder="Фильтр по скорости > 1000 Мбит/с" min="0">
+            <form method="get" action="/grid" class="filter-panel">
+                <div class="slider-block">
+                    <label class="slider-row">
+                        <span class="slider-label">от <b>{{ "%g"|format(freq_min) }}</b> ГГц</span>
+                        <input type="range" name="freq_min" class="range-slider"
+                               min="2.4" max="6" step="0.1" value="{{ freq_min }}">
+                    </label>
+                    <label class="slider-row">
+                        <span class="slider-label">до <b>{{ "%g"|format(freq_max) }}</b> ГГц</span>
+                        <input type="range" name="freq_max" class="range-slider"
+                               min="2.4" max="6" step="0.1" value="{{ freq_max }}">
+                    </label>
+                </div>
+                <button type="submit" class="btn search-btn">По частоте</button>
             </form>
 
-            {% set min_speed = request.query_params.get('speed_min') | int %}
-            <div class="eq-grid" id="eq-grid">
+            <p class="filter-result">Найдено: {{ equipment_list | length }}</p>
+
+            <div class="eq-grid">
                 {% for e in equipment_list %}
-                {% if min_speed == 0 or e.max_speed > min_speed %}
-                <a href="/feed/{{ e.id }}" class="eq-card" data-speed="{{ e.max_speed }}">
-                    <img src="{{ e.image_url }}" alt="{{ e.title }}" class="eq-card-img">
+                <a href="/feed/{{ e.id }}" class="eq-card">
+                    <img src="{{ e.image_url or '/static/img/default.svg' }}" alt="{{ e.title }}" class="eq-card-img">
                     <h3 class="eq-card-title">{{ e.title }}</h3>
                     <p class="eq-standard">{{ e.standard }}</p>
-                    <p class="eq-card-likes">♥️{{ e.likes }}</p>
+                    <p class="eq-card-params">{{ e.band | ghz }} · {{ e.antennas | antennas }}</p>
                     <p class="eq-card-speed">{{ e.max_speed }} Мбит/с</p>
+                    <p class="eq-card-likes">♥️{{ e.like_count }}</p>
                 </a>
-                {% endif %}
+                {% else %}
+                <p class="empty-hint">Оборудование не найдено</p>
                 {% endfor %}
             </div>
         </main>
 
-        <nav class="bottom-nav">
-            <a href="/feed/1" class="nav-tab">📱 Лента</a>
+            <nav class="bottom-nav">
+            <a href="/feed" class="nav-tab nav-active">📱 Лента</a>
             <a href="/add" class="nav-tab">➕ Добавление</a>
             <a href="/grid" class="nav-tab">📒 Плитка</a>
         </nav>
