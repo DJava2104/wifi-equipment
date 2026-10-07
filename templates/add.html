@@ -38,6 +38,16 @@
                 </label>
 
                 <label class="field">
+                    <span>Стандарт Wi-Fi</span>
+                    <input type="text" name="standard" value="{{ d.standard or '' }}" placeholder="Wi-Fi 6 (802.11ax)">
+                </label>
+
+                <label class="field">
+                    <span>Макс. скорость (Мбит/с)</span>
+                    <input type="number" min="1" step="1" name="max_speed" value="{{ d.max_speed or '' }}" placeholder="2400">
+                </label>
+
+                <label class="field">
                     <span>Антенны</span>
                     <input type="text" name="antennas" value="{{ d.antennas or '' }}" placeholder="4 антенны">
                 </label>

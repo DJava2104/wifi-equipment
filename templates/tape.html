@@ -35,6 +35,10 @@
                 <div class="feed-bottom">
                     <div class="feed-side">
                         <div class="stat">
+                            <span class="stat-label">Макс. скорость</span>
+                            <span class="stat-value stat-speed">{{ equipment.max_speed or '—' }} Мбит/с</span>
+                        </div>
+                        <div class="stat">
                             <span class="stat-label">Диапазон</span>
                             <span class="stat-value">{{ equipment.band or (equipment.frequency | ghz) }}</span>
                         </div>
