@@ -25,25 +25,22 @@
                     <input type="text" value="{{ d.title or '' }}" readonly>
                 </label>
 
-                <label class="field">
-                    <span>Стандарт Wi-Fi</span>
-                    <input type="text" name="standard" value="{{ d.standard or '' }}" placeholder="Wi-Fi 6 (802.11ax)" required>
-                </label>
+                <div class="add-section">
+                    <p>Описание</p>
+                    <textarea name="description" rows="4" placeholder="Краткое описание" required>{{ d.description or '' }}</textarea>
+                </div>
 
-                <label class="field">
-                    <span>Максимальная скорость (Мбит/с)</span>
-                    <input type="number" name="max_speed" value="{{ d.max_speed or '' }}" placeholder="1200" required>
-                </label>
+                <p class="section-label">Диапазон и антенны</p>
 
                 <label class="field">
                     <span>Частота (ГГц)</span>
                     <input type="number" step="0.1" min="0" name="frequency" value="{{ d.frequency or '' }}" placeholder="5.0" required>
                 </label>
 
-                <div class="add-section">
-                    <p>Описание</p>
-                    <textarea name="description" rows="4" placeholder="Краткое описание" required>{{ d.description or '' }}</textarea>
-                </div>
+                <label class="field">
+                    <span>Антенны</span>
+                    <input type="text" name="antennas" value="{{ d.antennas or '' }}" placeholder="4 антенны">
+                </label>
 
                 <button type="submit" class="btn">Опубликовать</button>
             </form>
@@ -67,14 +64,19 @@
                     <input type="text" name="title" value="{{ d.title or '' }}" placeholder="Название устройства" required>
                 </label>
 
+                <div class="add-section">
+                    <p>Описание</p>
+                    <textarea name="description" rows="4" placeholder="Краткое описание" required>{{ d.description or '' }}</textarea>
+                </div>
+
                 <button type="submit" class="btn">Далее</button>
             </form>
             {% endif %}
         </main>
 
         <nav class="bottom-nav">
-            <a href="/feed/1" class="nav-tab">📱 Лента</a>
-            <a href="/add" class="nav-tab">➕ Добавление</a>
+            <a href="/feed" class="nav-tab">📱 Лента</a>
+            <a href="/add" class="nav-tab nav-active">➕ Добавление</a>
             <a href="/grid" class="nav-tab">📒 Плитка</a>
         </nav>
     </div>

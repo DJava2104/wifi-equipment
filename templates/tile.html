@@ -3,27 +3,36 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Список — Wi-Fi Speed Calculator</title>
+    <title>Плитка — Wi-Fi Speed Calculator</title>
     <link rel="stylesheet" href="/static/css/style.css">
 </head>
 <body class="app-body">
 
     <div class="phone">
         <header class="screen-header">
-            <h1>Оборудование</h1>
+            <h1>Плитка</h1>
         </header>
 
         <main class="screen-scroll">
-            <form method="get" action="/grid" class="search">
+            <form method="get" action="/grid" class="filter-panel">
                 <div class="slider-block">
-                    <input type="range" name="freq_min" class="range-slider" min="0" max="10" step="0.1" value="{{ freq_min }}" />
-                    <input type="range" name="freq_max" class="range-slider" min="0" max="10" step="0.1" value="{{ freq_max }}" />
+                    <label class="slider-row">
+                        <span class="slider-label">от <b>{{ "%g"|format(freq_min) }}</b> ГГц</span>
+                        <input type="range" name="freq_min" class="range-slider"
+                               min="2.4" max="6" step="0.1" value="{{ freq_min }}">
+                    </label>
+                    <label class="slider-row">
+                        <span class="slider-label">до <b>{{ "%g"|format(freq_max) }}</b> ГГц</span>
+                        <input type="range" name="freq_max" class="range-slider"
+                               min="2.4" max="6" step="0.1" value="{{ freq_max }}">
+                    </label>
                 </div>
-                <button class="btn search-btn">🔎 Найти</button>
+                <button type="submit" class="btn search-btn">По частоте</button>
             </form>
-            <p class="filter-result">Результат поиска: от {{ freq_min }} до {{ freq_max }} ГГц</p>
 
-            <div class="eq-grid" id="eq-grid">
+            <p class="filter-result">Найдено: {{ equipment_list | length }}</p>
+
+            <div class="eq-grid">
                 {% for e in equipment_list %}
                 <div class="eq-card-wrap">
                     <a href="/feed/{{ e.id_equipment }}" class="eq-card">
@@ -32,8 +41,9 @@
                              onerror="this.onerror=null; this.src='/static/img/default.svg';">
                         <h3 class="eq-card-title">{{ e.title }}</h3>
                         <p class="eq-standard">{{ e.standard or '—' }}</p>
-                        <p class="eq-card-likes">♥️{{ likes_map.get(e.id_equipment, 0) }}</p>
+                        <p class="eq-card-params">{{ e.band or (e.frequency | ghz) }} · {{ e.antennas or '—' }}</p>
                         <p class="eq-card-speed">{{ e.max_speed or '—' }} Мбит/с</p>
+                        <p class="eq-card-likes">♥️{{ likes_map.get(e.id_equipment, 0) }}</p>
                     </a>
                     <form method="post" action="/equipment/{{ e.id_equipment }}/delete"
                           onsubmit="return confirm('Логически удалить услугу?');">
@@ -41,15 +51,15 @@
                     </form>
                 </div>
                 {% else %}
-                <p class="empty-hint">Услуги не найдены</p>
+                <p class="empty-hint">Оборудование не найдено</p>
                 {% endfor %}
             </div>
         </main>
 
         <nav class="bottom-nav">
-            <a href="/feed/1" class="nav-tab">📱 Лента</a>
+            <a href="/feed" class="nav-tab">📱 Лента</a>
             <a href="/add" class="nav-tab">➕ Добавление</a>
-            <a href="/grid" class="nav-tab">📒 Плитка</a>
+            <a href="/grid" class="nav-tab nav-active">📒 Плитка</a>
         </nav>
     </div>
 
