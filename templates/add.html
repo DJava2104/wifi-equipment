@@ -1,56 +1,84 @@
 <!DOCTYPE html>
 <html lang="ru">
-    <head>
-        <meta charset="UTF-8">
-        <title>Wi-Fi Speed Calculator</title>
-        <link rel="stylesheet" href="/static/css/style.css">
-    </head>
-    <body class="app-body">
-        <main class="main-grid">
-            
-            <div class="content-area">
-                <h2>Новое устройство</h2>
-                {% if draft %}
-                <form action="/publish" method="POST" class="add-form">
-                    <div class="add-section">
-                        <p>Максимальная скорость (Мбит/с)</p>
-                        <input type="number" name="max_speed" value="{{ draft.max_speed }}" placeholder="Скорость">
-                        <p>Стандарт Wi-Fi</p>
-                        <input type="text" name="standard" value="{{ draft.standard }}" placeholder="Wi-Fi 6 (802.11ax)">
-                        <p>Частота (ГГц)</p>
-                        <input type="number" step="0.1" min="0" name="frequency" value="{{ draft.frequency }}" placeholder="5.0">
-                        <p>Описание</p>
-                        <textarea name="description" rows="4" placeholder="Описание">{{ draft.description }}</textarea>
-                    </div>
-                    <button type="submit" class="btn">Опубликовать</button>
-                </form>
-                {% else %}
-                <form action="/add" method="POST" class="add-form">
-                    <div class="add-section">
-                        <label class="drop-zone">
-                            <input type="file" accept="image/*">
-                            <span>📷<br>Изображение</span>
-                        </label>
-                        <label class="drop-zone">
-                            <input type="file" accept="video/*">
-                            <span>🎥<br>Видео</span>
-                        </label>
-                    </div>
-                    <div class="add-section">
-                        <p>Название</p>
-                        <input type="text" name="title" placeholder="Название устройства">
-                    </div>
-                    <button type="submit" class="btn">Далее</button>
-                </form>
-                {% endif %}
-            </div>
-            <div class="tab-bar">
-                <a href="/feed/1" class="tab-btn">📱<br>Лента</a>
-                <div class="tab-btn tab-active">📝<br>Добавление</div>
-                <a href="/grid" class="tab-btn">📊<br>Плитка</a>
-            </div>
-            
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Добавление — Wi-Fi Speed Calculator</title>
+    <link rel="stylesheet" href="/static/css/style.css">
+</head>
+<body class="app-body">
+
+    {% set d = draft or {} %}
+
+    <div class="phone">
+        <header class="screen-header">
+            <h1>Добавление</h1>
+        </header>
+
+        <main class="screen-scroll">
+            {% if d.id_equipment %}
+            <form class="add-form" method="post" action="/publish">
+                <p class="section-label">Параметры устройства</p>
+
+                <label class="field">
+                    <span>Название</span>
+                    <input type="text" value="{{ d.title or '' }}" readonly>
+                </label>
+
+                <label class="field">
+                    <span>Стандарт Wi-Fi</span>
+                    <input type="text" name="standard" value="{{ d.standard or '' }}" placeholder="Wi-Fi 6 (802.11ax)" required>
+                </label>
+
+                <label class="field">
+                    <span>Максимальная скорость (Мбит/с)</span>
+                    <input type="number" name="max_speed" value="{{ d.max_speed or '' }}" placeholder="1200" required>
+                </label>
+
+                <label class="field">
+                    <span>Частота (ГГц)</span>
+                    <input type="number" step="0.1" min="0" name="frequency" value="{{ d.frequency or '' }}" placeholder="5.0" required>
+                </label>
+
+                <div class="add-section">
+                    <p>Описание</p>
+                    <textarea name="description" rows="4" placeholder="Краткое описание" required>{{ d.description or '' }}</textarea>
+                </div>
+
+                <button type="submit" class="btn">Опубликовать</button>
+            </form>
+            {% else %}
+            <form class="add-form" method="post" action="/add">
+                <div class="add-section">
+                    <label class="drop-zone">
+                        <input type="file" accept="image/*">
+                        <span>📷<br>Изображение</span>
+                    </label>
+                    <label class="drop-zone">
+                        <input type="file" accept="video/*">
+                        <span>🎥<br>Видео</span>
+                    </label>
+                </div>
+
+                <p class="section-label">Параметры устройства</p>
+
+                <label class="field">
+                    <span>Название</span>
+                    <input type="text" name="title" value="{{ d.title or '' }}" placeholder="Название устройства" required>
+                </label>
+
+                <button type="submit" class="btn">Далее</button>
+            </form>
+            {% endif %}
         </main>
+
+        <nav class="bottom-nav">
+            <a href="/feed/1" class="nav-tab">📱 Лента</a>
+            <a href="/add" class="nav-tab">➕ Добавление</a>
+            <a href="/grid" class="nav-tab">📒 Плитка</a>
+        </nav>
+    </div>
+
     <script>
     document.querySelectorAll('.drop-zone input[type="file"]').forEach(input => {
         input.addEventListener('change', e => {
@@ -67,5 +95,6 @@
         });
     });
     </script>
-    </body>
+
+</body>
 </html>
