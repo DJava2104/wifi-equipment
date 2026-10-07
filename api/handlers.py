@@ -82,8 +82,6 @@ async def root():
     return RedirectResponse(url="/feed")
 
 
-# Вкладка «Лента» открывается без ID — показывается первая опубликованная услуга.
-# /feed/{id} — страница услуги, стрелка «далее» ведёт к следующей по кругу.
 @router.get("/feed")
 async def get_feed(db: AsyncSession = Depends(get_db)):
     first_id = await get_first_published_id(db)
@@ -104,7 +102,6 @@ async def get_feed_item(request: Request, eq_id: int, db: AsyncSession = Depends
     equipment_row = current.mappings().first()
 
     if equipment_row is None:
-        # услуга удалена, является черновиком или не существует
         first_id = await get_first_published_id(db)
         if first_id is None:
             return RedirectResponse(url="/grid", status_code=303)
@@ -168,7 +165,6 @@ async def get_grid(
     )
 
 
-# На странице добавления показывается единственная услуга в статусе «черновик».
 @router.get("/add")
 async def get_add_page(request: Request, db: AsyncSession = Depends(get_db)):
     draft = await get_draft(CURRENT_USER, db)
