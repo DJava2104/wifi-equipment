@@ -28,7 +28,7 @@ body.app-body {
     padding: 20px;
 }
 
-/* ===== Корпус телефона и шапка ===== */
+/*Корпус телефона и шапка*/
 
 .phone {
     position: relative;
@@ -61,10 +61,10 @@ body.app-body {
 .screen-sub {
     margin: 4px 0 0;
     font-family: var(--mono);
-    font-size: 10px;
+    font-size: 12px;
     letter-spacing: 0.12em;
     text-transform: uppercase;
-    color: var(--primary);
+    color: var(--text-dark);
 }
 
 .screen-scroll {
@@ -147,7 +147,7 @@ body.app-body {
     color: var(--primary);
 }
 
-/* ===== Кнопки ===== */
+/*Кнопки*/
 
 .btn {
     padding: 12px 14px;
@@ -171,7 +171,7 @@ body.app-body {
     transform: scale(0.97);
 }
 
-/* ===== Стр. 1 — Лента ===== */
+/*Лента*/
 
 .feed-screen {
     position: relative;
@@ -388,7 +388,7 @@ body.app-body {
     display: inline-block;
 }
 
-/* ===== Стр. 2 — Добавление ===== */
+/*Добавление*/
 
 .section-label {
     margin: 14px 0 10px;
@@ -404,58 +404,73 @@ body.app-body {
     flex-direction: column;
 }
 
-.media-block {
+.add-section {
     display: flex;
-    flex-direction: column;
-    gap: 8px;
-    margin-bottom: 14px;
+    flex-wrap: wrap;
+    gap: 10px;
+    margin-bottom: 16px;
 }
 
-.upload-preview {
-    display: block;
+.add-section p {
     width: 100%;
-    height: 124px;
-    object-fit: cover;
-    border-radius: 18px;
-    background: var(--light);
+    margin: 0;
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--text-secondary);
 }
 
-.upload-box {
+.add-section input[type="text"],
+.add-section input[type="number"],
+.add-section textarea {
+    width: 100%;
+    padding: 12px 14px;
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    background: var(--light);
+    font-size: 14px;
+    color: var(--text-dark);
+    font-family: inherit;
+    outline: none;
+    transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.add-section input:focus,
+.add-section textarea:focus {
+    border-color: var(--primary);
+    box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.15);
+}
+
+.add-section textarea {
+    resize: vertical;
+}
+
+.drop-zone {
+    flex: 1 1 calc(50% - 5px);
+    aspect-ratio: 1 / 1;
+    border: 2px dashed #CBD5E1;
+    border-radius: 16px;
+    background: var(--light);
     display: flex;
     align-items: center;
     justify-content: center;
-    gap: 10px;
-    padding: 14px;
-    border: 1.5px dashed #A5B4FC;
-    border-radius: 16px;
-    background: #F5F6FF;
-    color: var(--primary);
     cursor: pointer;
-    transition: background 0.2s ease, border-color 0.2s ease;
+    overflow: hidden;
+    transition: border-color 0.2s ease, background 0.2s ease;
 }
 
-.upload-box:hover {
+.drop-zone:hover {
     background: var(--hover-pink);
     border-color: var(--hover-pink-border);
 }
 
-.upload-box svg {
-    width: 20px;
-    height: 20px;
-    fill: none;
-    stroke: currentColor;
-    stroke-width: 1.8;
-    stroke-linecap: round;
-    stroke-linejoin: round;
+.drop-zone span {
+    font-size: 16px;
+    color: var(--text-secondary);
+    text-align: center;
+    line-height: 1.35;
 }
 
-.upload-box span {
-    font-family: var(--mono);
-    font-size: 12px;
-    color: var(--text-dark);
-}
-
-.upload-box input {
+.drop-zone input {
     display: none;
 }
 
@@ -496,7 +511,7 @@ body.app-body {
     box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.15);
 }
 
-/* ===== Стр. 3 — Плитка ===== */
+/*Плитка*/
 
 .filter-panel {
     display: flex;

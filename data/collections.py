@@ -95,46 +95,4 @@ equipment_db = [
                        "диапазонах, включая 6 ГГц, и рассчитан на требовательные домашние "
                        "сети с большим числом устройств.",
     },
-    {
-        "id": 7,
-        "title": "TP-Link TL-WR840N",
-        "standard": "Wi-Fi 4 (802.11n)",
-        "max_speed": 300,
-        "band": 2.4,
-        "antennas": 2,
-        "image_url": f"{MINIO_BASE}WR840N.jpg",
-        "video_url": f"{MINIO_BASE}WR840N.mp4",
-        "likes": users(4),
-        "status": "опубликован",
-        "description": "Бюджетный однодиапазонный роутер для базовых задач: веб-серфинг "
-                       "и просмотр видео. Работает только на частоте 2,4 ГГц.",
-    },
-    {
-        "id": 8,
-        "title": "Huawei WiFi AX3 Pro",
-        "standard": "Wi-Fi 6 (802.11ax)",
-        "max_speed": 2402,
-        "band": 5.0,
-        "antennas": 4,
-        "image_url": f"{MINIO_BASE}AX3Pro.jpg",
-        "video_url": f"{MINIO_BASE}AX3Pro.mp4",
-        "likes": users(27),
-        "status": "удален",
-        "description": "Роутер Wi-Fi 6 с четырёхъядерным процессором. Снят с каталога, "
-                       "в интерфейсе не отображается.",
-    },
-    {
-        "id": 9,
-        "title": "Xiaomi Mi Router AX3000",
-        "standard": "Wi-Fi 6 (802.11ax)",
-        "max_speed": 2402,
-        "band": 5.0,
-        "antennas": 4,
-        "image_url": f"{MINIO_BASE}AX3000.jpg",
-        "video_url": f"{MINIO_BASE}AX3000.mp4",
-        "likes": [],
-        "status": "черновик",
-        "description": "Двухдиапазонный роутер Wi-Fi 6 с четырьмя внешними антеннами "
-                       "и простой настройкой через приложение.",
-    },
 ]
