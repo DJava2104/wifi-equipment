@@ -45,8 +45,7 @@
                         <p class="eq-card-speed">{{ e.max_speed or '—' }} Мбит/с</p>
                         <p class="eq-card-likes">♥️{{ likes_map.get(e.id_equipment, 0) }}</p>
                     </a>
-                    <form method="post" action="/equipment/{{ e.id_equipment }}/delete"
-                          onsubmit="return confirm('Логически удалить услугу?');">
+                    <form method="post" action="/equipment/{{ e.id_equipment }}/delete">
                         <button type="submit" class="delete-btn">Удалить</button>
                     </form>
                 </div>
