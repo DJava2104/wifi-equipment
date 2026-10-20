@@ -1,192 +1,662 @@
 {
   "info": {
-    "_postman_id": "wifi-equipment-api-0001",
-    "name": "Wi-Fi Equipment — Lab 3 REST API",
-    "description": "Коллекция из 10 запросов (FastAPI, все адреса с префиксом /api).\n\nДомен услуги (7 методов) + Домен пользователя (3 метода).\n\nПеред прогонкой: docker compose up -d, alembic upgrade head, uvicorn main:app --reload.\nТекущий пользователь-создатель зафиксирован константой (singleton): USER_ID=1, USERNAME=user_0.\n\nВ запросе «POST Добавление» в полях image и video выберите файлы (тип File): postman/test.png и postman/test.mp4. Имена файлов (латиница, uuid) сохраняются в БД, сами файлы — в MinIO. id созданной услуги сохраняется в {{equipment_id}} и подхватывается запросами PUT/DELETE/like.",
+    "_postman_id": "wifi-equipment-api-0004",
+    "name": "Wi-Fi Equipment — Lab 4 REST API",
+    "description": "Коллекция лабораторной работы №4: аутентификация через сессию в Redis + HttpOnly-кука sessionId.\n\nПорядок прогонки:\n1. «Домен пользователь»: регистрация (логин/пароль сохраняются в {{username}}/{{password}}), аутентификация (значение куки из Set-Cookie сохраняется в {{session_id}}).\n2. «Домен услуги»: сначала анонимные запросы на {{anon_url}} (куки-джар Postman относится к base_url, поэтому гостевые запросы реально идут без сессии → 401), затем запросы с авторизацией на {{base_url}} через заголовок Cookie: sessionId={{session_id}}.\n3. «Деавторизация»: logout уничтожает сессию в Redis, повторный запрос с той же кукой → 401.\n\nТребования: docker compose up -d (postgres, minio, redis), alembic upgrade head, uvicorn main:app --reload.\nВ запросах «POST — добавление» в полях image и video выберите файлы (тип File): postman/test.png и postman/test.mp4. id созданной услуги сохраняется в {{equipment_id}}.\n\nБез авторизации доступно только чтение (GET), с авторизацией — методы создателя (создание, публикация, удаление, лайк, черновик).",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
   },
   "variable": [
-    { "key": "base_url", "value": "http://127.0.0.1:8000" },
-    { "key": "equipment_id", "value": "" }
+    {
+      "key": "base_url",
+      "value": "http://127.0.0.1:8000"
+    },
+    {
+      "key": "anon_url",
+      "value": "http://localhost:8000"
+    },
+    {
+      "key": "username",
+      "value": ""
+    },
+    {
+      "key": "password",
+      "value": ""
+    },
+    {
+      "key": "session_id",
+      "value": ""
+    },
+    {
+      "key": "equipment_id",
+      "value": ""
+    }
   ],
   "item": [
     {
-      "name": "Домен услуги",
+      "name": "Домен пользователь",
+      "description": "Регистрация и аутентификация. После login кука sessionId (HttpOnly, Max-Age=3600) сохраняется в переменную {{session_id}} и дальше передаётся заголовком Cookie в методы создателя.",
       "item": [
         {
-          "name": "GET — список с фильтрацией (is_creator 0/1)",
+          "name": "POST — регистрация",
           "event": [
             {
               "listen": "test",
               "script": {
                 "exec": [
                   "pm.test('Статус 200', () => pm.response.to.have.status(200));",
-                  "const data = pm.response.json();",
-                  "pm.test('Список опубликованных', () => pm.expect(data).to.be.an('array'));",
-                  "pm.test('Признак is_creator (0/1)', () => {",
-                  "  data.forEach(e => pm.expect(e).to.have.property('is_creator'));",
-                  "});"
-                ],
-                "type": "text/javascript"
-              }
-            }
-          ],
-          "request": {
-            "auth": { "type": "noauth" },
-            "method": "GET",
-            "header": [],
-            "url": {
-              "raw": "{{base_url}}/api/equipments?freq_min=2.4&freq_max=6.0",
-              "host": ["{{base_url}}"],
-              "path": ["api", "equipments"],
-              "query": [
-                { "key": "freq_min", "value": "2.4" },
-                { "key": "freq_max", "value": "6.0" }
-              ]
-            },
-            "description": "Список только опубликованных услуг с фильтрацией на бэкенде по частоте. Поле is_creator (0/1) — совпадает ли создатель услуги с текущим пользователем."
-          }
-        },
-        {
-          "name": "GET — лента (is_liked 0/1)",
-          "event": [
-            {
-              "listen": "test",
-              "script": {
-                "exec": [
-                  "pm.test('Статус 200', () => pm.response.to.have.status(200));",
-                  "const data = pm.response.json();",
-                  "pm.test('Текущее опубликованное устройство', () => pm.expect(data).to.be.an('object'));",
-                  "pm.test('Признак is_liked (0/1)', () => pm.expect(data.is_liked).to.be.oneOf([0, 1]));",
-                  "pm.test('Счётчик лайков like_count', () => pm.expect(data).to.have.property('like_count'));"
-                ],
-                "type": "text/javascript"
-              }
-            }
-          ],
-          "request": {
-            "auth": { "type": "noauth" },
-            "method": "GET",
-            "header": [],
-            "url": {
-              "raw": "{{base_url}}/api/equipment",
-              "host": ["{{base_url}}"],
-              "path": ["api", "equipment"]
-            },
-            "description": "Лента: только опубликованные. Первое опубликованное устройство + like_count + is_liked (0/1 — лайкнул ли текущий пользователь). Циклический переход — GET /api/equipment/{id}?next=true (следующее после указанного)."
-          }
-        },
-        {
-          "name": "GET — получение черновика (без ид)",
-          "event": [
-            {
-              "listen": "test",
-              "script": {
-                "exec": [
-                  "pm.test('Статус 200', () => pm.response.to.have.status(200));",
-                  "const data = pm.response.json();",
-                  "pm.test('Черновик или null (не более 1 записи)', () => {",
-                  "  pm.expect(data === null || typeof data === 'object').to.be.true;",
-                  "  if (data) pm.expect(data.status).to.eql('черновик');",
-                  "});"
-                ],
-                "type": "text/javascript"
-              }
-            }
-          ],
-          "request": {
-            "auth": { "type": "noauth" },
-            "method": "GET",
-            "header": [],
-            "url": {
-              "raw": "{{base_url}}/api/equipment/draft",
-              "host": ["{{base_url}}"],
-              "path": ["api", "equipment", "draft"]
-            },
-            "description": "Черновик текущего пользователя (не более 1 записи). Ид не указывается. Если черновика нет — null."
-          }
-        },
-        {
-          "name": "POST — добавление (файлы image + video в MinIO)",
-          "event": [
-            {
-              "listen": "test",
-              "script": {
-                "exec": [
-                  "pm.test('Статус 200', () => pm.response.to.have.status(200));",
-                  "const data = pm.response.json();",
-                  "pm.test('Статус черновик', () => pm.expect(data.status).to.eql('черновик'));",
-                  "pm.test('Имена файлов в БД — латиница (uuid.ext)', () => {",
-                  "  pm.expect(data.image_url).to.match(/^[a-z0-9]+\\.[a-z0-9]+$/i);",
-                  "  pm.expect(data.video_url).to.match(/^[a-z0-9]+\\.[a-z0-9]+$/i);",
+                  "const body = pm.response.json();",
+                  "pm.test('Возвращает id_user и username', () => {",
+                  "  pm.expect(body).to.have.property('id_user');",
+                  "  pm.expect(body).to.have.property('username');",
                   "});",
-                  "pm.environment.set('equipment_id', data.id_equipment);",
-                  "console.log('equipment_id =', data.id_equipment);"
+                  "const form = pm.request.body.formdata;",
+                  "const u = form.find(x => x.key === 'username').value;",
+                  "const p = form.find(x => x.key === 'password').value;",
+                  "pm.environment.set('username', pm.variables.replaceIn(u));",
+                  "pm.environment.set('password', pm.variables.replaceIn(p));"
                 ],
                 "type": "text/javascript"
               }
             }
           ],
           "request": {
-            "auth": { "type": "noauth" },
+            "auth": {
+              "type": "noauth"
+            },
             "method": "POST",
             "header": [],
             "body": {
               "mode": "formdata",
               "formdata": [
-                { "key": "title", "value": "TP-Link Archer AX73", "type": "text" },
-                { "key": "image", "type": "file", "src": "test.png" },
-                { "key": "video", "type": "file", "src": "test.mp4" }
+                {
+                  "key": "username",
+                  "value": "student-{{$randomUUID}}",
+                  "type": "text"
+                },
+                {
+                  "key": "password",
+                  "value": "secret123",
+                  "type": "text"
+                }
               ]
             },
             "url": {
-              "raw": "{{base_url}}/api/equipment",
-              "host": ["{{base_url}}"],
-              "path": ["api", "equipment"]
+              "raw": "{{base_url}}/api/register",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "register"
+              ]
             },
-            "description": "Создание черновика. Form-data: title (текст), image (файл), video (файл) — передаются как ФАЙЛЫ, а не URL. Файлы кладутся в MinIO, их имена генерируются на латинице (uuid.ext) и сохраняются в поля БД. Если черновик уже есть — 500. id сохраняется в {{equipment_id}}."
+            "description": "Регистрация (form-data: username, password). Логин уникален (генерируется через {{$randomUUID}}, чтобы повторный прогон не падал) → дубль логина даёт 409. Сессия при регистрации не выдаётся — далее выполняется login."
           }
         },
         {
-          "name": "PUT — публикация (смена статуса)",
+          "name": "POST — аутентификация",
           "event": [
             {
               "listen": "test",
               "script": {
                 "exec": [
                   "pm.test('Статус 200', () => pm.response.to.have.status(200));",
-                  "const data = pm.response.json();",
-                  "pm.test('Статус опубликован', () => pm.expect(data.status).to.eql('опубликован'));",
-                  "pm.test('Дата публикации заполнена', () => pm.expect(data.date_formed).to.not.eql(null));"
+                  "const body = pm.response.json();",
+                  "pm.test('Ответ содержит user', () => {",
+                  "  pm.expect(body).to.have.property('user');",
+                  "  pm.expect(body.user.username).to.eql(pm.environment.get('username'));",
+                  "});",
+                  "const sc = pm.response.headers.get('Set-Cookie') || '';",
+                  "pm.test('Set-Cookie: sessionId HttpOnly', () => {",
+                  "  pm.expect(sc).to.include('sessionId=');",
+                  "  pm.expect(sc.toLowerCase()).to.include('httponly');",
+                  "});",
+                  "const m = sc.match(/sessionId=([^;]+)/);",
+                  "pm.environment.set('session_id', m ? m[1] : '');",
+                  "pm.test('session_id сохранён в переменную', () => pm.expect(pm.environment.get('session_id')).to.not.eql(''));"
                 ],
                 "type": "text/javascript"
               }
             }
           ],
           "request": {
-            "auth": { "type": "noauth" },
+            "auth": {
+              "type": "noauth"
+            },
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                {
+                  "key": "username",
+                  "value": "{{username}}",
+                  "type": "text"
+                },
+                {
+                  "key": "password",
+                  "value": "{{password}}",
+                  "type": "text"
+                }
+              ]
+            },
+            "url": {
+              "raw": "{{base_url}}/api/login",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "login"
+              ]
+            },
+            "description": "Аутентификация. Сервер создаёт запись в Redis session:<id> → {\"id_user\":…, \"username\":…} и возвращает HttpOnly-куку sessionId в Set-Cookie. Неверный пароль → 401. Значение куки сохраняется в {{session_id}} — оно же показывается в cmd: redis-cli GET session:<id>."
+          }
+        }
+      ]
+    },
+    {
+      "name": "Домен услуги",
+      "description": "Анонимные запросы идут на {{anon_url}} (localhost) — кук-джару Postman они неизвестны, поэтому проверка «работает без токена/куки» честная. Авторизованные — на {{base_url}} (127.0.0.1) с заголовком Cookie: sessionId={{session_id}}.",
+      "item": [
+        {
+          "name": "GET — список с фильтрацией (без авторизации)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Статус 200 без токена/куки', () => pm.response.to.have.status(200));",
+                  "const body = pm.response.json();",
+                  "pm.test('Список опубликованных', () => pm.expect(body).to.be.an('array'));",
+                  "pm.test('Признак is_creator (0/1)', () => {",
+                  "  body.forEach(e => pm.expect(e.is_creator).to.be.oneOf([0, 1]));",
+                  "});",
+                  "pm.test('Гостю всегда is_creator = 0', () => {",
+                  "  body.forEach(e => pm.expect(e.is_creator).to.eql(0));",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "auth": {
+              "type": "noauth"
+            },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{anon_url}}/api/equipments?freq_min=2.4&freq_max=6.0",
+              "host": [
+                "{{anon_url}}"
+              ],
+              "path": [
+                "api",
+                "equipments"
+              ],
+              "query": [
+                {
+                  "key": "freq_min",
+                  "value": "2.4"
+                },
+                {
+                  "key": "freq_max",
+                  "value": "6.0"
+                }
+              ]
+            },
+            "description": "Открытый метод: список опубликованных услуг с фильтром по частоте. Работает независимо от токена/куки; is_creator для гостя всегда 0."
+          }
+        },
+        {
+          "name": "GET — черновик без куки → 401",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Гость получает 401', () => pm.response.to.have.status(401));",
+                  "pm.test('Ошибка про сессию', () => pm.expect(pm.response.json().detail).to.include('ки'));"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "auth": {
+              "type": "noauth"
+            },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{anon_url}}/api/equipment/draft",
+              "host": [
+                "{{anon_url}}"
+              ],
+              "path": [
+                "api",
+                "equipment",
+                "draft"
+              ]
+            },
+            "description": "Метод создателя без авторизации → 401 (без авторизации в API доступно только чтение)."
+          }
+        },
+        {
+          "name": "POST — создание черновика без куки → 401",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Гость получает 401', () => pm.response.to.have.status(401));"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "auth": {
+              "type": "noauth"
+            },
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                {
+                  "key": "title",
+                  "value": "Не должно создаться",
+                  "type": "text"
+                }
+              ]
+            },
+            "url": {
+              "raw": "{{anon_url}}/api/equipment",
+              "host": [
+                "{{anon_url}}"
+              ],
+              "path": [
+                "api",
+                "equipment"
+              ]
+            },
+            "description": "POST без сессии → 401, услуга не создаётся."
+          }
+        },
+        {
+          "name": "GET — лента без авторизации",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Статус 200', () => pm.response.to.have.status(200));",
+                  "const body = pm.response.json();",
+                  "pm.test('Текущее опубликованное устройство', () => pm.expect(body).to.be.an('object'));",
+                  "pm.test('Счётчик like_count', () => pm.expect(body).to.have.property('like_count'));",
+                  "pm.test('is_liked = 0 для гостя', () => pm.expect(body.is_liked).to.eql(0));"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "auth": {
+              "type": "noauth"
+            },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{anon_url}}/api/equipment",
+              "host": [
+                "{{anon_url}}"
+              ],
+              "path": [
+                "api",
+                "equipment"
+              ]
+            },
+            "description": "Лента с начала: первое опубликованное устройство + like_count + is_liked (0 для гостя)."
+          }
+        },
+        {
+          "name": "POST — добавление (кука, файлы image + video)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Статус 200', () => pm.response.to.have.status(200));",
+                  "const body = pm.response.json();",
+                  "pm.test('Статус черновик', () => pm.expect(body.status).to.eql('черновик'));",
+                  "pm.test('creator заполнен из сессии', () => pm.expect(body.creator).to.eql(pm.environment.get('username')));",
+                  "pm.test('Имена файлов в БД — латиница (uuid.ext)', () => {",
+                  "  pm.expect(body.image_url).to.match(/^[0-9a-f-]+\\.(png|jpg|jpeg)$/i);",
+                  "  pm.expect(body.video_url).to.match(/^[0-9a-f-]+\\.mp4$/i);",
+                  "});",
+                  "pm.environment.set('equipment_id', String(body.id_equipment));"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "auth": {
+              "type": "noauth"
+            },
+            "method": "POST",
+            "header": [
+              {
+                "key": "Cookie",
+                "value": "sessionId={{session_id}}"
+              }
+            ],
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                {
+                  "key": "title",
+                  "value": "Router AX Test",
+                  "type": "text"
+                },
+                {
+                  "key": "image",
+                  "type": "file",
+                  "src": "postman/test.png"
+                },
+                {
+                  "key": "video",
+                  "type": "file",
+                  "src": "postman/test.mp4"
+                }
+              ]
+            },
+            "url": {
+              "raw": "{{base_url}}/api/equipment",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "equipment"
+              ]
+            },
+            "description": "Метод создателя (заголовок Cookie: sessionId={{session_id}}). Файлы кладутся в MinIO, в БД — их латинские имена. creator автоматически заполняется из сессии. Не более одного черновика на пользователя → повторный POST даёт 409. id сохраняется в {{equipment_id}}."
+          }
+        },
+        {
+          "name": "GET — поля черновика (кука)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Статус 200', () => pm.response.to.have.status(200));",
+                  "const body = pm.response.json();",
+                  "pm.test('Статус черновик', () => pm.expect(body.status).to.eql('черновик'));",
+                  "pm.test('Это созданный черновик', () => pm.expect(String(body.id_equipment)).to.eql(pm.environment.get('equipment_id')));",
+                  "pm.test('Поля черновика', () => {",
+                  "  pm.expect(body).to.have.property('title');",
+                  "  pm.expect(body).to.have.property('image_url');",
+                  "  pm.expect(body).to.have.property('video_url');",
+                  "  pm.expect(body).to.have.property('creator');",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "auth": {
+              "type": "noauth"
+            },
+            "method": "GET",
+            "header": [
+              {
+                "key": "Cookie",
+                "value": "sessionId={{session_id}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/equipment/draft",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "equipment",
+                "draft"
+              ]
+            },
+            "description": "Черновик текущего пользователя (не более 1 записи) или null, если черновиков нет. Требуется кука sessionId."
+          }
+        },
+        {
+          "name": "PUT — публикация без куки → 401",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Гость получает 401', () => pm.response.to.have.status(401));"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "auth": {
+              "type": "noauth"
+            },
             "method": "PUT",
             "header": [],
             "body": {
               "mode": "formdata",
               "formdata": [
-                { "key": "description", "value": "Двухдиапазонный роутер Wi-Fi 6", "type": "text" },
-                { "key": "frequency", "value": "5.0", "type": "text" },
-                { "key": "standard", "value": "Wi-Fi 6 (802.11ax)", "type": "text" },
-                { "key": "max_speed", "value": "4804", "type": "text" },
-                { "key": "antennas", "value": "6", "type": "text" }
+                {
+                  "key": "description",
+                  "value": "Не публикуется",
+                  "type": "text"
+                },
+                {
+                  "key": "frequency",
+                  "value": "5.0",
+                  "type": "text"
+                }
+              ]
+            },
+            "url": {
+              "raw": "{{anon_url}}/api/equipment/{{equipment_id}}",
+              "host": [
+                "{{anon_url}}"
+              ],
+              "path": [
+                "api",
+                "equipment",
+                "{{equipment_id}}"
+              ]
+            },
+            "description": "Публикация услуги без авторизации → 401 (или 403, если бы кука была чужой). Выполняется до публикации с кукой, поэтому черновик остаётся нетронутым."
+          }
+        },
+        {
+          "name": "PUT — публикация (кука) → обновление полей",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Статус 200', () => pm.response.to.have.status(200));",
+                  "const body = pm.response.json();",
+                  "pm.test('Статус опубликован', () => pm.expect(body.status).to.eql('опубликован'));",
+                  "pm.test('Дата публикации заполнена', () => pm.expect(body.date_formed).to.not.eql(null));",
+                  "pm.test('Поля обновлены', () => {",
+                  "  pm.expect(body.description).to.eql('Роутер тестовый');",
+                  "  pm.expect(body.frequency).to.eql(5);",
+                  "  pm.expect(body.band).to.eql('5.0 ГГц');",
+                  "  pm.expect(body.standard).to.eql('802.11ax');",
+                  "});",
+                  "pm.test('creator не изменился', () => pm.expect(body.creator).to.eql(pm.environment.get('username')));"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "auth": {
+              "type": "noauth"
+            },
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Cookie",
+                "value": "sessionId={{session_id}}"
+              }
+            ],
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                {
+                  "key": "description",
+                  "value": "Роутер тестовый",
+                  "type": "text"
+                },
+                {
+                  "key": "frequency",
+                  "value": "5.0",
+                  "type": "text"
+                },
+                {
+                  "key": "standard",
+                  "value": "802.11ax",
+                  "type": "text"
+                },
+                {
+                  "key": "max_speed",
+                  "value": "3000",
+                  "type": "text"
+                },
+                {
+                  "key": "antennas",
+                  "value": "4",
+                  "type": "text"
+                }
               ]
             },
             "url": {
               "raw": "{{base_url}}/api/equipment/{{equipment_id}}",
-              "host": ["{{base_url}}"],
-              "path": ["api", "equipment", "{{equipment_id}}"]
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "equipment",
+                "{{equipment_id}}"
+              ]
             },
-            "description": "Публикация (смена статуса черновик → опубликован). Только своя услуга, статус должен быть «черновик». Form-data: description, frequency, standard, max_speed, antennas. Статусы нельзя менять с любого на любой — вернуть в черновик нельзя."
+            "description": "Публикация своего черновика с кукой: описание/частота/стандарт/скорость/антенны записываются, band вычисляется, статус → «опубликован», date_formed = сейчас. Чужую услугу нельзя опубликовать → 403, повторно → 409."
           }
         },
         {
-          "name": "DELETE — удаление (soft delete, только свои)",
+          "name": "GET — лента по ид ?next=true (без авторизации)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Статус 200', () => pm.response.to.have.status(200));",
+                  "const body = pm.response.json();",
+                  "pm.test('Объект ленты', () => pm.expect(body).to.be.an('object'));",
+                  "pm.test('like_count и is_liked', () => {",
+                  "  pm.expect(body).to.have.property('like_count');",
+                  "  pm.expect(body.is_liked).to.eql(0);",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "auth": {
+              "type": "noauth"
+            },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{anon_url}}/api/equipment/{{equipment_id}}?next=true",
+              "host": [
+                "{{anon_url}}"
+              ],
+              "path": [
+                "api",
+                "equipment",
+                "{{equipment_id}}"
+              ],
+              "query": [
+                {
+                  "key": "next",
+                  "value": "true"
+                }
+              ]
+            },
+            "description": "Лента по id: устройство + like_count + is_liked. next=true — следующее опубликованное после указанного (переход по кругу). Работает без куки."
+          }
+        },
+        {
+          "name": "POST — like (кука, 1 поставить)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Статус 200', () => pm.response.to.have.status(200));",
+                  "const body = pm.response.json();",
+                  "pm.test('Возвращает like_count', () => pm.expect(body).to.have.property('like_count'));",
+                  "pm.test('Лайк учтён', () => pm.expect(body.like_count).to.be.at.least(1));"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "auth": {
+              "type": "noauth"
+            },
+            "method": "POST",
+            "header": [
+              {
+                "key": "Cookie",
+                "value": "sessionId={{session_id}}"
+              }
+            ],
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                {
+                  "key": "like",
+                  "value": "1",
+                  "type": "text"
+                }
+              ]
+            },
+            "url": {
+              "raw": "{{base_url}}/api/equipment/{{equipment_id}}",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "equipment",
+                "{{equipment_id}}"
+              ]
+            },
+            "description": "Лайк от имени текущего пользователя (id берётся из сессии, а не из константы). like=1 — поставить, like=0 — отменить."
+          }
+        },
+        {
+          "name": "DELETE — soft delete (кука, только свои)",
           "event": [
             {
               "listen": "test",
@@ -200,149 +670,110 @@
             }
           ],
           "request": {
-            "auth": { "type": "noauth" },
+            "auth": {
+              "type": "noauth"
+            },
             "method": "DELETE",
-            "header": [],
-            "url": {
-              "raw": "{{base_url}}/api/equipment/{{equipment_id}}",
-              "host": ["{{base_url}}"],
-              "path": ["api", "equipment", "{{equipment_id}}"]
-            },
-            "description": "Мягкое удаление (soft delete) — только услуг этого пользователя. Записи в статусе «удален» на клиент не передаются. Ответ: 200, пустое тело."
-          }
-        },
-        {
-          "name": "POST — like (1 поставить / 0 отменить)",
-          "event": [
-            {
-              "listen": "test",
-              "script": {
-                "exec": [
-                  "pm.test('Статус 200', () => pm.response.to.have.status(200));",
-                  "const data = pm.response.json();",
-                  "pm.test('Возвращает like_count', () => pm.expect(data).to.have.property('like_count'));"
-                ],
-                "type": "text/javascript"
+            "header": [
+              {
+                "key": "Cookie",
+                "value": "sessionId={{session_id}}"
               }
-            }
-          ],
-          "request": {
-            "auth": { "type": "noauth" },
-            "method": "POST",
-            "header": [],
-            "body": {
-              "mode": "formdata",
-              "formdata": [{ "key": "like", "value": "1", "type": "text" }]
-            },
+            ],
             "url": {
               "raw": "{{base_url}}/api/equipment/{{equipment_id}}",
-              "host": ["{{base_url}}"],
-              "path": ["api", "equipment", "{{equipment_id}}"]
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "equipment",
+                "{{equipment_id}}"
+              ]
             },
-            "description": "Лайк от текущего пользователя. Form-data: like (1=поставить лайк, 0=отменить). Ответ: {like_count}."
+            "description": "Мягкое удаление своей услуги (status → «удалён»), пустое тело ответа. Чужую удалить нельзя → 403. Запускается последним в папке, чтобы тестовая услуга не оставалась в БД."
           }
         }
       ]
     },
     {
-      "name": "Домен пользователь",
+      "name": "Деавторизация",
       "item": [
         {
-          "name": "POST — регистрация",
+          "name": "POST — деавторизация (кука)",
           "event": [
             {
               "listen": "test",
               "script": {
                 "exec": [
                   "pm.test('Статус 200', () => pm.response.to.have.status(200));",
-                  "const data = pm.response.json();",
-                  "pm.test('Возвращает id_user и username', () => {",
-                  "  pm.expect(data).to.have.property('id_user');",
-                  "  pm.expect(data).to.have.property('username');",
-                  "});"
+                  "pm.test('Ответ ok', () => pm.expect(pm.response.json().ok).to.eql(true));"
                 ],
                 "type": "text/javascript"
               }
             }
           ],
           "request": {
-            "auth": { "type": "noauth" },
+            "auth": {
+              "type": "noauth"
+            },
             "method": "POST",
-            "header": [],
-            "body": {
-              "mode": "formdata",
-              "formdata": [
-                { "key": "username", "value": "student_{{$randomUUID}}", "type": "text" },
-                { "key": "password", "value": "secret123", "type": "text" }
-              ]
-            },
-            "url": {
-              "raw": "{{base_url}}/api/register",
-              "host": ["{{base_url}}"],
-              "path": ["api", "register"]
-            },
-            "description": "Регистрация. Form-data: username, password. Логин уникален (генерируется через {{$randomUUID}}, чтобы повторный прогон не падал). Дубль логина → 500."
-          }
-        },
-        {
-          "name": "POST — аутентификация (заглушка)",
-          "event": [
-            {
-              "listen": "test",
-              "script": {
-                "exec": [
-                  "pm.test('Статус 200', () => pm.response.to.have.status(200));",
-                  "const data = pm.response.json();",
-                  "pm.test('Заглушка stub', () => pm.expect(data.message).to.eql('stub'));"
-                ],
-                "type": "text/javascript"
+            "header": [
+              {
+                "key": "Cookie",
+                "value": "sessionId={{session_id}}"
               }
-            }
-          ],
-          "request": {
-            "auth": { "type": "noauth" },
-            "method": "POST",
-            "header": [],
-            "body": {
-              "mode": "formdata",
-              "formdata": [
-                { "key": "username", "value": "user_0", "type": "text" },
-                { "key": "password", "value": "password", "type": "text" }
-              ]
-            },
-            "url": {
-              "raw": "{{base_url}}/api/login",
-              "host": ["{{base_url}}"],
-              "path": ["api", "login"]
-            },
-            "description": "Аутентификация — заглушка для 4-й лабораторной. Ответ: {message: stub}."
-          }
-        },
-        {
-          "name": "POST — деавторизация (заглушка)",
-          "event": [
-            {
-              "listen": "test",
-              "script": {
-                "exec": [
-                  "pm.test('Статус 200', () => pm.response.to.have.status(200));",
-                  "const data = pm.response.json();",
-                  "pm.test('Заглушка stub', () => pm.expect(data.message).to.eql('stub'));"
-                ],
-                "type": "text/javascript"
-              }
-            }
-          ],
-          "request": {
-            "auth": { "type": "noauth" },
-            "method": "POST",
-            "header": [],
+            ],
             "url": {
               "raw": "{{base_url}}/api/logout",
-              "host": ["{{base_url}}"],
-              "path": ["api", "logout"]
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "logout"
+              ]
             },
-            "description": "Деавторизация — заглушка для 4-й лабораторной. Ответ: {message: stub}."
+            "description": "Удаляет session:<id> из Redis и очищает куку — мгновенная деавторизация. Без куки → 401 (без авторизации доступно только чтение)."
+          }
+        },
+        {
+          "name": "GET — черновик после деавторизации → 401",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Сессия уничтожена → 401', () => pm.response.to.have.status(401));",
+                  "pm.test('Тело про сессию', () => pm.expect(pm.response.json().detail.toLowerCase()).to.include('сессия'));"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "auth": {
+              "type": "noauth"
+            },
+            "method": "GET",
+            "header": [
+              {
+                "key": "Cookie",
+                "value": "sessionId={{session_id}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/equipment/draft",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "equipment",
+                "draft"
+              ]
+            },
+            "description": "Та же кука после logout больше не действительна: сессии в Redis нет → 401."
           }
         }
       ]

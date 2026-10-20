@@ -14,6 +14,11 @@ class Settings(BaseSettings):
     MINIO_BUCKET: str = "wifi-equipment"
     MINIO_USE_SSL: bool = False
 
+    REDIS_HOST: str = "localhost"
+    REDIS_PORT: int = 6379
+    REDIS_DB: int = 0
+    SESSION_TTL: int = 3600
+
     @property
     def DATABASE_URL(self) -> str:
         return f"postgresql+asyncpg://{self.DB_USER}:{self.DB_PASSWORD}@{self.DB_HOST}:{self.DB_PORT}/{self.DB_NAME}"
