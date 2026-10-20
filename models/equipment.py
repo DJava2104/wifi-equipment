@@ -17,4 +17,5 @@ class Equipment(Base):
     date_created = Column(TIMESTAMP, nullable=False, server_default=func.now())
     creator = Column(String(50), nullable=False)
     date_formed = Column(TIMESTAMP, nullable=True)
+    date_completed = Column(TIMESTAMP, nullable=True)
     status = Column(String(20), nullable=False, server_default="черновик")

@@ -1,12 +1,27 @@
+from contextlib import asynccontextmanager
+
+import uvicorn
 from fastapi import FastAPI
 from fastapi.staticfiles import StaticFiles
-import uvicorn
-from api.handlers import router
 
-app = FastAPI(title="Wi-Fi Speed Calculator")
+from api.equipment import router as equipment_router
+from api.handlers import router
+from api.user import router as user_router
+from minio_client import ensure_bucket
+
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    ensure_bucket()
+    yield
+
+
+app = FastAPI(title="Wi-Fi Speed Calculator", lifespan=lifespan)
 
 app.mount("/static", StaticFiles(directory="static"), name="static")
 app.include_router(router)
+app.include_router(equipment_router)
+app.include_router(user_router)
 
 if __name__ == "__main__":
     uvicorn.run("main:app", host="127.0.0.1", port=8000, reload=True)
