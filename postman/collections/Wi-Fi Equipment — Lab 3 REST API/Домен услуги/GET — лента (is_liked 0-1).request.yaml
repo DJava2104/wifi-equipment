@@ -1,0 +1,17 @@
+$kind: http-request
+name: GET — лента (is_liked 0/1)
+description: "Лента: только опубликованные. Первое опубликованное устройство + like_count + is_liked (0/1 — лайкнул ли текущий пользователь). Циклический переход — GET /api/equipment/{id}?next=true (следующее после указанного)."
+url: "{{base_url}}/api/equipment"
+method: GET
+auth:
+  type: noauth
+scripts:
+  - type: afterResponse
+    code: |-
+      pm.test('Статус 200', () => pm.response.to.have.status(200));
+      const data = pm.response.json();
+      pm.test('Текущее опубликованное устройство', () => pm.expect(data).to.be.an('object'));
+      pm.test('Признак is_liked (0/1)', () => pm.expect(data.is_liked).to.be.oneOf([0, 1]));
+      pm.test('Счётчик лайков like_count', () => pm.expect(data).to.have.property('like_count'));
+    language: text/javascript
+order: 2000

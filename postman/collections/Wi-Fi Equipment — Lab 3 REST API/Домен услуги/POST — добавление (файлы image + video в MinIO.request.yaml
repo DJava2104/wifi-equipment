@@ -1,0 +1,35 @@
+$kind: http-request
+name: POST — добавление (файлы image + video в MinIO)
+description: "Создание черновика. Form-data: title (текст), image (файл), video (файл) — передаются как ФАЙЛЫ, а не URL. Файлы кладутся в MinIO, их имена генерируются на латинице (uuid.ext) и сохраняются в поля БД. Если черновик уже есть — 500. id сохраняется в {{equipment_id}}."
+url: "{{base_url}}/api/equipment"
+method: POST
+body:
+  type: formdata
+  content:
+    - type: text
+      key: title
+      value: TP-Link Archer AX73
+    - type: file
+      key: image
+      src:
+        - test.png
+    - type: file
+      key: video
+      src:
+        - test.mp4
+auth:
+  type: noauth
+scripts:
+  - type: afterResponse
+    code: |-
+      pm.test('Статус 200', () => pm.response.to.have.status(200));
+      const data = pm.response.json();
+      pm.test('Статус черновик', () => pm.expect(data.status).to.eql('черновик'));
+      pm.test('Имена файлов в БД — латиница (uuid.ext)', () => {
+        pm.expect(data.image_url).to.match(/^[a-z0-9]+\.[a-z0-9]+$/i);
+        pm.expect(data.video_url).to.match(/^[a-z0-9]+\.[a-z0-9]+$/i);
+      });
+      pm.environment.set('equipment_id', data.id_equipment);
+      console.log('equipment_id =', data.id_equipment);
+    language: text/javascript
+order: 4000

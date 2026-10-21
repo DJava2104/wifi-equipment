@@ -1,0 +1,14 @@
+$kind: http-request
+description: "Деавторизация — заглушка для 4-й лабораторной. Ответ: {message: stub}."
+url: "{{base_url}}/api/logout"
+method: POST
+auth:
+  type: noauth
+scripts:
+  - type: afterResponse
+    code: |-
+      pm.test('Статус 200', () => pm.response.to.have.status(200));
+      const data = pm.response.json();
+      pm.test('Заглушка stub', () => pm.expect(data.message).to.eql('stub'));
+    language: text/javascript
+order: 3000

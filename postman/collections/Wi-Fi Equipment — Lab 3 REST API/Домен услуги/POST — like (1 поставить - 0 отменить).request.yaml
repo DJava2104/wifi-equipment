@@ -1,0 +1,21 @@
+$kind: http-request
+name: POST — like (1 поставить / 0 отменить)
+description: "Лайк от текущего пользователя. Form-data: like (1=поставить лайк, 0=отменить). Ответ: {like_count}."
+url: "{{base_url}}/api/equipment/{{equipment_id}}"
+method: POST
+body:
+  type: formdata
+  content:
+    - type: text
+      key: like
+      value: "1"
+auth:
+  type: noauth
+scripts:
+  - type: afterResponse
+    code: |-
+      pm.test('Статус 200', () => pm.response.to.have.status(200));
+      const data = pm.response.json();
+      pm.test('Возвращает like_count', () => pm.expect(data).to.have.property('like_count'));
+    language: text/javascript
+order: 7000
