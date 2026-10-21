@@ -1,21 +1,21 @@
-from models.equipment import Equipment
+from models.routers import Router
 
 
-def equipment_serializer(equipment: Equipment) -> dict:
+def router_serializer(router: Router) -> dict:
     return {
-        "id_equipment": equipment.id_equipment,
-        "title": equipment.title,
-        "standard": equipment.standard,
-        "max_speed": equipment.max_speed,
-        "band": equipment.band,
-        "antennas": equipment.antennas,
-        "frequency": equipment.frequency,
-        "image_url": equipment.image_url,
-        "video_url": equipment.video_url,
-        "description": equipment.description,
-        "status": equipment.status,
-        "date_created": equipment.date_created,
-        "creator": equipment.creator,
-        "date_formed": equipment.date_formed,
-        "date_completed": equipment.date_completed,
+        "id_routers": router.id_routers,
+        "title": router.title,
+        "standard": router.standard,
+        "max_speed": router.max_speed,
+        "band": router.band,
+        "antennas": router.antennas,
+        "frequency": router.frequency,
+        "image_url": router.image_url,
+        "video_url": router.video_url,
+        "description": router.description,
+        "status": router.status,
+        "date_created": router.date_created,
+        "creator": router.creator,
+        "date_formed": router.date_formed,
+        "date_completed": router.date_completed,
     }

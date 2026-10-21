@@ -245,10 +245,6 @@ body.app-body {
     color: var(--text-dark);
 }
 
-.stat-speed {
-    color: var(--speed);
-}
-
 .feed-actions {
     display: flex;
     flex-direction: column;
@@ -290,7 +286,7 @@ body.app-body {
     font-weight: 700;
 }
 
-/* Название и короткое описание внизу: 2 строки, дальше «Еще» (без JavaScript) */
+/* Название, стандарт и короткое описание внизу: 2 строки, дальше «Еще» (без JavaScript) */
 .feed-info {
     padding: 12px 14px;
     border-radius: 20px;
@@ -380,47 +376,21 @@ body.app-body {
 
 .add-section {
     display: flex;
-    flex-wrap: wrap;
+    flex-direction: column;
     gap: 10px;
     margin-bottom: 16px;
 }
 
 .add-section p {
-    width: 100%;
     margin: 0;
     font-size: 13px;
     font-weight: 600;
     color: var(--text-secondary);
 }
 
-.add-section input[type="text"],
-.add-section input[type="number"],
-.add-section textarea {
-    width: 100%;
-    padding: 12px 14px;
-    border: 1px solid var(--border);
-    border-radius: 14px;
-    background: var(--light);
-    font-size: 14px;
-    color: var(--text-dark);
-    font-family: inherit;
-    outline: none;
-    transition: border-color 0.2s ease, box-shadow 0.2s ease;
-}
-
-.add-section input:focus,
-.add-section textarea:focus {
-    border-color: var(--primary);
-    box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.15);
-}
-
-.add-section textarea {
-    resize: vertical;
-}
-
 .drop-zone {
-    flex: 1 1 calc(50% - 5px);
-    aspect-ratio: 1 / 1;
+    width: 100%;
+    min-height: 120px;
     border: 2px dashed #CBD5E1;
     border-radius: 16px;
     background: var(--light);
@@ -613,19 +583,20 @@ body.app-body {
 .delete-btn {
     width: 100%;
     padding: 8px 10px;
-    border: 2px solid #555555;
+    border: none;
     border-radius: 12px;
-    background: #555555;
+    background: var(--primary);
     color: var(--white);
     font-size: 13px;
     font-weight: 600;
     font-family: inherit;
     cursor: pointer;
-    transition: background 0.2s ease;
+    transition: background 0.2s ease, color 0.2s ease, transform 0.1s ease;
 }
 
 .delete-btn:hover {
-    background: #333333;
+    background: var(--hover-pink);
+    color: var(--primary);
 }
 
 .empty-hint {

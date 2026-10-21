@@ -1,14 +1,14 @@
-# Wi-Fi Equipment — REST API
+# Wi-Fi Routers — REST API
 
 Веб-сервис (REST API) для каталога Wi-Fi оборудования. Бэкенд для SPA: список устройств с фильтрацией, лента, черновики, публикация, лайки, мягкое удаление и загрузка файлов в MinIO.
 
 ## Таблицы БД
 
-### equipment
+### routers
 
 | Поле | Тип | Описание |
 |---|---|---|
-| id_equipment | INTEGER PK | Идентификатор |
+| id_routers | INTEGER PK | Идентификатор |
 | title | VARCHAR(100) | Название |
 | standard | VARCHAR(50) | Стандарт Wi-Fi |
 | max_speed | INTEGER | Макс. скорость, Мбит/с |
@@ -37,7 +37,7 @@
 | Поле | Тип | Описание |
 |---|---|---|
 | id_user | INTEGER FK | Пользователь |
-| id_equipment | INTEGER FK | Устройство |
+| id_routers | INTEGER FK | Устройство |
 
 ---
 
@@ -49,14 +49,14 @@
 
 | Метод | URL | Описание |
 |---|---|---|
-| GET | `/api/equipments?freq_min=&freq_max=` | Список опубликованных с фильтрацией по частоте. Поле `is_creator` (0/1) — совпадает ли создатель с текущим пользователем |
-| GET | `/api/equipment?next=true` | Лента с начала: первое опубликованное + `like_count` + `is_liked` (0/1) |
-| GET | `/api/equipment/{id_equipment}?next=true` | Лента по ид: устройство + `like_count` + `is_liked`. `next=true` — следующее после указанного (цикл) |
-| GET | `/api/equipment/draft` | Черновик текущего пользователя (не более 1 записи) |
-| POST | `/api/equipment` | Создать черновик. Form: `title`, `image` (файл), `video` (файл). Файлы кладутся в MinIO, их имена (латиница, uuid) — в БД |
-| PUT | `/api/equipment/{id_equipment}` | Опубликовать (только свой черновик). Form: `description`, `frequency`, `standard`, `max_speed`, `antennas` |
-| DELETE | `/api/equipment/{id_equipment}` | Soft delete (только свои). Ответ: 200, пустое тело |
-| POST | `/api/equipment/{id_equipment}` | Лайк. Form: `like` (1=поставить, 0=отменить). Ответ: `{like_count}` |
+| GET | `/api/routers?freq_min=&freq_max=` | Список опубликованных с фильтрацией по частоте. Поле `is_creator` (0/1) — совпадает ли создатель с текущим пользователем |
+| GET | `/api/router?next=true` | Лента с начала: первое опубликованное + `like_count` + `is_liked` (0/1) |
+| GET | `/api/router/{id_routers}?next=true` | Лента по ид: устройство + `like_count` + `is_liked`. `next=true` — следующее после указанного (цикл) |
+| GET | `/api/router/draft` | Черновик текущего пользователя (не более 1 записи) |
+| POST | `/api/router` | Создать черновик. Form: `title`, `image` (файл), `video` (файл). Файлы кладутся в MinIO, их имена (латиница, uuid) — в БД |
+| PUT | `/api/router/{id_routers}` | Опубликовать (только свой черновик). Form: `description`, `frequency`, `standard`, `max_speed`, `antennas` |
+| DELETE | `/api/router/{id_routers}` | Soft delete (только свои). Ответ: 200, пустое тело |
+| POST | `/api/router/{id_routers}` | Лайк. Form: `like` (1=поставить, 0=отменить). Ответ: `{like_count}` |
 
 ### Домен пользователя
 

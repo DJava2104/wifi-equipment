@@ -1,13 +1,13 @@
 {
   "info": {
-    "_postman_id": "wifi-equipment-api-0001",
-    "name": "Wi-Fi Equipment — Lab 3 REST API",
-    "description": "Коллекция из 10 запросов (FastAPI, все адреса с префиксом /api).\n\nДомен услуги (7 методов) + Домен пользователя (3 метода).\n\nПеред прогонкой: docker compose up -d, alembic upgrade head, uvicorn main:app --reload.\nТекущий пользователь-создатель зафиксирован константой (singleton): USER_ID=1, USERNAME=user_0.\n\nВ запросе «POST Добавление» в полях image и video выберите файлы (тип File): postman/test.png и postman/test.mp4. Имена файлов (латиница, uuid) сохраняются в БД, сами файлы — в MinIO. id созданной услуги сохраняется в {{equipment_id}} и подхватывается запросами PUT/DELETE/like.",
+    "_postman_id": "wifi-router-api-0001",
+    "name": "Wi-Fi Routers — Lab 3 REST API",
+    "description": "Коллекция из 10 запросов (FastAPI, все адреса с префиксом /api).\n\nДомен услуги (7 методов) + Домен пользователя (3 метода).\n\nПеред прогонкой: docker compose up -d, alembic upgrade head, uvicorn main:app --reload.\nТекущий пользователь-создатель зафиксирован константой (singleton): USER_ID=1, USERNAME=user_0.\n\nВ запросе «POST Добавление» в полях image и video выберите файлы (тип File): postman/test.png и postman/test.mp4. Имена файлов (латиница, uuid) сохраняются в БД, сами файлы — в MinIO. id созданной услуги сохраняется в {{router_id}} и подхватывается запросами PUT/DELETE/like.",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
   },
   "variable": [
     { "key": "base_url", "value": "http://127.0.0.1:8000" },
-    { "key": "equipment_id", "value": "" }
+    { "key": "router_id", "value": "" }
   ],
   "item": [
     {
@@ -36,9 +36,9 @@
             "method": "GET",
             "header": [],
             "url": {
-              "raw": "{{base_url}}/api/equipments?freq_min=2.4&freq_max=6.0",
+              "raw": "{{base_url}}/api/routers?freq_min=2.4&freq_max=6.0",
               "host": ["{{base_url}}"],
-              "path": ["api", "equipments"],
+              "path": ["api", "routers"],
               "query": [
                 { "key": "freq_min", "value": "2.4" },
                 { "key": "freq_max", "value": "6.0" }
@@ -69,11 +69,11 @@
             "method": "GET",
             "header": [],
             "url": {
-              "raw": "{{base_url}}/api/equipment",
+              "raw": "{{base_url}}/api/router",
               "host": ["{{base_url}}"],
-              "path": ["api", "equipment"]
+              "path": ["api", "router"]
             },
-            "description": "Лента: только опубликованные. Первое опубликованное устройство + like_count + is_liked (0/1 — лайкнул ли текущий пользователь). Циклический переход — GET /api/equipment/{id}?next=true (следующее после указанного)."
+            "description": "Лента: только опубликованные. Первое опубликованное устройство + like_count + is_liked (0/1 — лайкнул ли текущий пользователь). Циклический переход — GET /api/router/{id}?next=true (следующее после указанного)."
           }
         },
         {
@@ -99,9 +99,9 @@
             "method": "GET",
             "header": [],
             "url": {
-              "raw": "{{base_url}}/api/equipment/draft",
+              "raw": "{{base_url}}/api/router/draft",
               "host": ["{{base_url}}"],
-              "path": ["api", "equipment", "draft"]
+              "path": ["api", "router", "draft"]
             },
             "description": "Черновик текущего пользователя (не более 1 записи). Ид не указывается. Если черновика нет — null."
           }
@@ -120,8 +120,8 @@
                   "  pm.expect(data.image_url).to.match(/^[a-z0-9]+\\.[a-z0-9]+$/i);",
                   "  pm.expect(data.video_url).to.match(/^[a-z0-9]+\\.[a-z0-9]+$/i);",
                   "});",
-                  "pm.environment.set('equipment_id', data.id_equipment);",
-                  "console.log('equipment_id =', data.id_equipment);"
+                  "pm.environment.set('router_id', data.id_routers);",
+                  "console.log('router_id =', data.id_routers);"
                 ],
                 "type": "text/javascript"
               }
@@ -140,11 +140,11 @@
               ]
             },
             "url": {
-              "raw": "{{base_url}}/api/equipment",
+              "raw": "{{base_url}}/api/router",
               "host": ["{{base_url}}"],
-              "path": ["api", "equipment"]
+              "path": ["api", "router"]
             },
-            "description": "Создание черновика. Form-data: title (текст), image (файл), video (файл) — передаются как ФАЙЛЫ, а не URL. Файлы кладутся в MinIO, их имена генерируются на латинице (uuid.ext) и сохраняются в поля БД. Если черновик уже есть — 500. id сохраняется в {{equipment_id}}."
+            "description": "Создание черновика. Form-data: title (текст), image (файл), video (файл) — передаются как ФАЙЛЫ, а не URL. Файлы кладутся в MinIO, их имена генерируются на латинице (uuid.ext) и сохраняются в поля БД. Если черновик уже есть — 500. id сохраняется в {{router_id}}."
           }
         },
         {
@@ -178,9 +178,9 @@
               ]
             },
             "url": {
-              "raw": "{{base_url}}/api/equipment/{{equipment_id}}",
+              "raw": "{{base_url}}/api/router/{{router_id}}",
               "host": ["{{base_url}}"],
-              "path": ["api", "equipment", "{{equipment_id}}"]
+              "path": ["api", "router", "{{router_id}}"]
             },
             "description": "Публикация (смена статуса черновик → опубликован). Только своя услуга, статус должен быть «черновик». Form-data: description, frequency, standard, max_speed, antennas. Статусы нельзя менять с любого на любой — вернуть в черновик нельзя."
           }
@@ -204,9 +204,9 @@
             "method": "DELETE",
             "header": [],
             "url": {
-              "raw": "{{base_url}}/api/equipment/{{equipment_id}}",
+              "raw": "{{base_url}}/api/router/{{router_id}}",
               "host": ["{{base_url}}"],
-              "path": ["api", "equipment", "{{equipment_id}}"]
+              "path": ["api", "router", "{{router_id}}"]
             },
             "description": "Мягкое удаление (soft delete) — только услуг этого пользователя. Записи в статусе «удален» на клиент не передаются. Ответ: 200, пустое тело."
           }
@@ -235,9 +235,9 @@
               "formdata": [{ "key": "like", "value": "1", "type": "text" }]
             },
             "url": {
-              "raw": "{{base_url}}/api/equipment/{{equipment_id}}",
+              "raw": "{{base_url}}/api/router/{{router_id}}",
               "host": ["{{base_url}}"],
-              "path": ["api", "equipment", "{{equipment_id}}"]
+              "path": ["api", "router", "{{router_id}}"]
             },
             "description": "Лайк от текущего пользователя. Form-data: like (1=поставить лайк, 0=отменить). Ответ: {like_count}."
           }
