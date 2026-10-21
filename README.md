@@ -53,7 +53,7 @@
 | GET | `/api/router?next=true` | Лента с начала: первое опубликованное + `like_count` + `is_liked` (0/1) |
 | GET | `/api/router/{id_routers}?next=true` | Лента по ид: устройство + `like_count` + `is_liked`. `next=true` — следующее после указанного (цикл) |
 | GET | `/api/router/draft` | Черновик текущего пользователя (не более 1 записи) |
-| POST | `/api/router` | Создать черновик. Form: `title`, `image` (файл), `video` (файл). Файлы кладутся в MinIO, их имена (латиница, uuid) — в БД |
+| POST | `/api/router` | Создать черновик. Form: `title`, `image` (файл), `video` (файл) — обязательно; `frequency`, `max_speed`, `standard`, `antennas`, `description` — опционально. Файлы кладутся в MinIO, их имена (латиница, uuid) — в БД |
 | PUT | `/api/router/{id_routers}` | Опубликовать (только свой черновик). Form: `description`, `frequency`, `standard`, `max_speed`, `antennas` |
 | DELETE | `/api/router/{id_routers}` | Soft delete (только свои). Ответ: 200, пустое тело |
 | POST | `/api/router/{id_routers}` | Лайк. Form: `like` (1=поставить, 0=отменить). Ответ: `{like_count}` |

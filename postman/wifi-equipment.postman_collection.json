@@ -136,7 +136,12 @@
               "formdata": [
                 { "key": "title", "value": "TP-Link Archer AX73", "type": "text" },
                 { "key": "image", "type": "file", "src": "test.png" },
-                { "key": "video", "type": "file", "src": "test.mp4" }
+                { "key": "video", "type": "file", "src": "test.mp4" },
+                { "key": "frequency", "value": "5", "type": "text" },
+                { "key": "max_speed", "value": "32", "type": "text" },
+                { "key": "standard", "value": "Wi-Fi 6 (802.11ax)", "type": "text" },
+                { "key": "antennas", "value": "4 антенны", "type": "text" },
+                { "key": "description", "value": "Двухдиапазонный роутер", "type": "text" }
               ]
             },
             "url": {
@@ -144,7 +149,7 @@
               "host": ["http://localhost:8000"],
               "path": ["api", "router"]
             },
-            "description": "Создание черновика. Form-data: title (текст), image (файл), video (файл) — передаются как ФАЙЛЫ, а не URL. Файлы кладутся в MinIO, их имена генерируются на латинице (uuid.ext) и сохраняются в поля БД. Если черновик уже есть — 500. id сохраняется в {{router_id}}."
+            "description": "Создание черновика. Form-data: title, image (файл), video (файл) — обязательны; frequency, max_speed, standard, antennas, description — опциональны. Файлы кладутся в MinIO, их имена генерируются на латинице (uuid.ext) и сохраняются в поля БД. Если черновик уже есть — 500. id сохраняется в {{router_id}}."
           }
         },
         {
