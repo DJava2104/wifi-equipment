@@ -6,7 +6,7 @@
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
   },
   "variable": [
-    { "key": "base_url", "value": "localhost:8000" },
+    { "key": "base_url", "value": "http://localhost:8000" },
     { "key": "router_id", "value": "" }
   ],
   "item": [
@@ -36,8 +36,8 @@
             "method": "GET",
             "header": [],
             "url": {
-              "raw": "localhost:8000/api/routers?freq_min=2.4&freq_max=6.0",
-              "host": ["localhost:8000"],
+              "raw": "http://localhost:8000/api/routers?freq_min=2.4&freq_max=6.0",
+              "host": ["http://localhost:8000"],
               "path": ["api", "routers"],
               "query": [
                 { "key": "freq_min", "value": "2.4" },
@@ -69,8 +69,8 @@
             "method": "GET",
             "header": [],
             "url": {
-              "raw": "localhost:8000/api/router",
-              "host": ["localhost:8000"],
+              "raw": "http://localhost:8000/api/router",
+              "host": ["http://localhost:8000"],
               "path": ["api", "router"]
             },
             "description": "Лента: только опубликованные. Первое опубликованное устройство + like_count + is_liked (0/1 — лайкнул ли текущий пользователь). Циклический переход — GET /api/router/{id}?next=true (следующее после указанного)."
@@ -99,8 +99,8 @@
             "method": "GET",
             "header": [],
             "url": {
-              "raw": "localhost:8000/api/router/draft",
-              "host": ["localhost:8000"],
+              "raw": "http://localhost:8000/api/router/draft",
+              "host": ["http://localhost:8000"],
               "path": ["api", "router", "draft"]
             },
             "description": "Черновик текущего пользователя (не более 1 записи). Ид не указывается. Если черновика нет — null."
@@ -140,8 +140,8 @@
               ]
             },
             "url": {
-              "raw": "localhost:8000/api/router",
-              "host": ["localhost:8000"],
+              "raw": "http://localhost:8000/api/router",
+              "host": ["http://localhost:8000"],
               "path": ["api", "router"]
             },
             "description": "Создание черновика. Form-data: title (текст), image (файл), video (файл) — передаются как ФАЙЛЫ, а не URL. Файлы кладутся в MinIO, их имена генерируются на латинице (uuid.ext) и сохраняются в поля БД. Если черновик уже есть — 500. id сохраняется в {{router_id}}."
@@ -178,8 +178,8 @@
               ]
             },
             "url": {
-              "raw": "localhost:8000/api/router/{{router_id}}",
-              "host": ["localhost:8000"],
+              "raw": "http://localhost:8000/api/router/{{router_id}}",
+              "host": ["http://localhost:8000"],
               "path": ["api", "router", "{{router_id}}"]
             },
             "description": "Публикация (смена статуса черновик → опубликован). Только своя услуга, статус должен быть «черновик». Form-data: description, frequency, standard, max_speed, antennas. Статусы нельзя менять с любого на любой — вернуть в черновик нельзя."
@@ -204,8 +204,8 @@
             "method": "DELETE",
             "header": [],
             "url": {
-              "raw": "localhost:8000/api/router/{{router_id}}",
-              "host": ["localhost:8000"],
+              "raw": "http://localhost:8000/api/router/{{router_id}}",
+              "host": ["http://localhost:8000"],
               "path": ["api", "router", "{{router_id}}"]
             },
             "description": "Мягкое удаление (soft delete) — только услуг этого пользователя. Записи в статусе «удален» на клиент не передаются. Ответ: 200, пустое тело."
@@ -235,8 +235,8 @@
               "formdata": [{ "key": "like", "value": "1", "type": "text" }]
             },
             "url": {
-              "raw": "localhost:8000/api/router/{{router_id}}",
-              "host": ["localhost:8000"],
+              "raw": "http://localhost:8000/api/router/{{router_id}}",
+              "host": ["http://localhost:8000"],
               "path": ["api", "router", "{{router_id}}"]
             },
             "description": "Лайк от текущего пользователя. Form-data: like (1=поставить лайк, 0=отменить). Ответ: {like_count}."
@@ -277,8 +277,8 @@
               ]
             },
             "url": {
-              "raw": "localhost:8000/api/register",
-              "host": ["localhost:8000"],
+              "raw": "http://localhost:8000/api/register",
+              "host": ["http://localhost:8000"],
               "path": ["api", "register"]
             },
             "description": "Регистрация. Form-data: username, password. Логин уникален (генерируется через {{$randomUUID}}, чтобы повторный прогон не падал). Дубль логина → 500."
@@ -311,8 +311,8 @@
               ]
             },
             "url": {
-              "raw": "localhost:8000/api/login",
-              "host": ["localhost:8000"],
+              "raw": "http://localhost:8000/api/login",
+              "host": ["http://localhost:8000"],
               "path": ["api", "login"]
             },
             "description": "Аутентификация — заглушка для 4-й лабораторной. Ответ: {message: stub}."
@@ -338,8 +338,8 @@
             "method": "POST",
             "header": [],
             "url": {
-              "raw": "localhost:8000/api/logout",
-              "host": ["localhost:8000"],
+              "raw": "http://localhost:8000/api/logout",
+              "host": ["http://localhost:8000"],
               "path": ["api", "logout"]
             },
             "description": "Деавторизация — заглушка для 4-й лабораторной. Ответ: {message: stub}."
