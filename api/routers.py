@@ -5,10 +5,10 @@ from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from api.deps import get_current_user
-from api.serializers import equipment_serializer
+from api.serializers import router_serializer
 from db.session import get_db
 from minio_client import upload_file
-from models.equipment import Equipment
+from models.routers import Router
 from models.likes import Likes
 
 router = APIRouter(prefix="/api")
@@ -18,87 +18,87 @@ PUBLISHED = "опубликован"
 DELETED = "удален"
 
 
-async def _feed_out(db: AsyncSession, equipment: Equipment) -> dict:
+async def _feed_out(db: AsyncSession, router: Router) -> dict:
     current_user = get_current_user()
     like_count = (
         await db.execute(
             select(func.count())
             .select_from(Likes)
-            .where(Likes.id_equipment == equipment.id_equipment)
+            .where(Likes.id_routers == router.id_routers)
         )
     ).scalar_one()
     is_liked = (
         await db.execute(
             select(Likes)
-            .where(Likes.id_equipment == equipment.id_equipment)
+            .where(Likes.id_routers == router.id_routers)
             .where(Likes.id_user == current_user.USER_ID)
         )
     ).scalar_one_or_none() is not None
-    out = equipment_serializer(equipment)
+    out = router_serializer(router)
     out["like_count"] = like_count
     out["is_liked"] = 1 if is_liked else 0
     return out
 
 
-@router.get("/equipments")
-async def get_equipments(
+@router.get("/routers")
+async def get_routers(
     freq_min: float | None = Query(None),
     freq_max: float | None = Query(None),
     db: AsyncSession = Depends(get_db),
 ):
     current_user = get_current_user()
-    stmt = select(Equipment).where(Equipment.status == PUBLISHED)
+    stmt = select(Router).where(Router.status == PUBLISHED)
     if freq_min is not None:
-        stmt = stmt.where(Equipment.frequency >= freq_min)
+        stmt = stmt.where(Router.frequency >= freq_min)
     if freq_max is not None:
-        stmt = stmt.where(Equipment.frequency <= freq_max)
+        stmt = stmt.where(Router.frequency <= freq_max)
     result = await db.execute(stmt)
-    equipments = result.scalars().all()
+    routers = result.scalars().all()
     return [
         {
-            **equipment_serializer(e),
+            **router_serializer(e),
             "is_creator": 1 if e.creator == current_user.USERNAME else 0,
         }
-        for e in equipments
+        for e in routers
     ]
 
 
-@router.get("/equipment/draft")
+@router.get("/router/draft")
 async def get_draft(db: AsyncSession = Depends(get_db)):
     current_user = get_current_user()
     result = await db.execute(
-        select(Equipment)
-        .where(Equipment.status == DRAFT)
-        .where(Equipment.creator == current_user.USERNAME)
+        select(Router)
+        .where(Router.status == DRAFT)
+        .where(Router.creator == current_user.USERNAME)
         .limit(1)
     )
-    equipment = result.scalar_one_or_none()
-    if equipment is None:
+    router = result.scalar_one_or_none()
+    if router is None:
         return None
-    return equipment_serializer(equipment)
+    return router_serializer(router)
 
 
-@router.get("/equipment")
-@router.get("/equipment/{id_equipment}")
-async def get_equipment(
-    id_equipment: int | None = None,
+@router.get("/router")
+@router.get("/router/{id_routers}")
+async def get_router(
+    id_routers: int | None = None,
     go_next: bool = Query(False, alias="next"),
     db: AsyncSession = Depends(get_db),
 ):
     result = await db.execute(
-        select(Equipment)
-        .where(Equipment.status == PUBLISHED)
-        .order_by(Equipment.id_equipment)
+        select(Router)
+        .where(Router.status == PUBLISHED)
+        .order_by(Router.id_routers)
     )
     published = result.scalars().all()
     if not published:
         return Response(status_code=404)
 
-    if id_equipment is None:
+    if id_routers is None:
         idx = 0
     else:
         idx = next(
-            (i for i, e in enumerate(published) if e.id_equipment == id_equipment),
+            (i for i, e in enumerate(published) if e.id_routers == id_routers),
             None,
         )
         if idx is None:
@@ -110,8 +110,8 @@ async def get_equipment(
     return await _feed_out(db, published[idx])
 
 
-@router.post("/equipment")
-async def create_equipment(
+@router.post("/router")
+async def create_router(
     title: str = Form(...),
     image: UploadFile = File(...),
     video: UploadFile = File(...),
@@ -119,9 +119,9 @@ async def create_equipment(
 ):
     current_user = get_current_user()
     existing = await db.execute(
-        select(Equipment)
-        .where(Equipment.status == DRAFT)
-        .where(Equipment.creator == current_user.USERNAME)
+        select(Router)
+        .where(Router.status == DRAFT)
+        .where(Router.creator == current_user.USERNAME)
         .limit(1)
     )
     if existing.scalar_one_or_none() is not None:
@@ -130,7 +130,7 @@ async def create_equipment(
     image_url = upload_file(await image.read(), image.filename)
     video_url = upload_file(await video.read(), video.filename)
 
-    equipment = Equipment(
+    router = Router(
         title=title,
         image_url=image_url,
         video_url=video_url,
@@ -138,15 +138,15 @@ async def create_equipment(
         date_created=datetime.now(),
         creator=current_user.USERNAME,
     )
-    db.add(equipment)
+    db.add(router)
     await db.commit()
-    await db.refresh(equipment)
-    return equipment_serializer(equipment)
+    await db.refresh(router)
+    return router_serializer(router)
 
 
-@router.put("/equipment/{id_equipment}")
-async def publish_equipment(
-    id_equipment: int,
+@router.put("/router/{id_routers}")
+async def publish_router(
+    id_routers: int,
     description: str = Form(...),
     frequency: float = Form(...),
     standard: str = Form(""),
@@ -156,55 +156,55 @@ async def publish_equipment(
 ):
     current_user = get_current_user()
     result = await db.execute(
-        select(Equipment).where(Equipment.id_equipment == id_equipment)
+        select(Router).where(Router.id_routers == id_routers)
     )
-    equipment = result.scalar_one_or_none()
-    if equipment is None:
+    router = result.scalar_one_or_none()
+    if router is None:
         return Response(status_code=404)
-    if equipment.status != DRAFT:
+    if router.status != DRAFT:
         return Response(status_code=500)
-    if equipment.creator != current_user.USERNAME:
+    if router.creator != current_user.USERNAME:
         return Response(status_code=500)
 
-    equipment.description = description
-    equipment.frequency = frequency
-    equipment.band = f"{frequency} ГГц"
-    equipment.standard = standard or None
-    equipment.max_speed = max_speed
-    equipment.antennas = antennas or None
-    equipment.status = PUBLISHED
-    equipment.date_formed = datetime.now()
+    router.description = description
+    router.frequency = frequency
+    router.band = f"{frequency} ГГц"
+    router.standard = standard or None
+    router.max_speed = max_speed
+    router.antennas = antennas or None
+    router.status = PUBLISHED
+    router.date_formed = datetime.now()
     await db.commit()
-    await db.refresh(equipment)
-    return equipment_serializer(equipment)
+    await db.refresh(router)
+    return router_serializer(router)
 
 
-@router.delete("/equipment/{id_equipment}")
-async def delete_equipment(
-    id_equipment: int,
+@router.delete("/router/{id_routers}")
+async def delete_router(
+    id_routers: int,
     db: AsyncSession = Depends(get_db),
 ):
     current_user = get_current_user()
     result = await db.execute(
-        select(Equipment).where(Equipment.id_equipment == id_equipment)
+        select(Router).where(Router.id_routers == id_routers)
     )
-    equipment = result.scalar_one_or_none()
-    if equipment is None:
+    router = result.scalar_one_or_none()
+    if router is None:
         return Response(status_code=404)
-    if equipment.creator != current_user.USERNAME:
+    if router.creator != current_user.USERNAME:
         return Response(status_code=500)
-    if equipment.status == DELETED:
+    if router.status == DELETED:
         return Response(status_code=404)
 
-    equipment.status = DELETED
-    equipment.date_completed = datetime.now()
+    router.status = DELETED
+    router.date_completed = datetime.now()
     await db.commit()
     return Response(status_code=200)
 
 
-@router.post("/equipment/{id_equipment}")
-async def like_equipment(
-    id_equipment: int,
+@router.post("/router/{id_routers}")
+async def like_router(
+    id_routers: int,
     like: int = Form(...),
     db: AsyncSession = Depends(get_db),
 ):
@@ -212,12 +212,12 @@ async def like_equipment(
     existing = await db.execute(
         select(Likes)
         .where(Likes.id_user == current_user.USER_ID)
-        .where(Likes.id_equipment == id_equipment)
+        .where(Likes.id_routers == id_routers)
     )
     like_row = existing.scalar_one_or_none()
 
     if like == 1 and like_row is None:
-        db.add(Likes(id_user=current_user.USER_ID, id_equipment=id_equipment))
+        db.add(Likes(id_user=current_user.USER_ID, id_routers=id_routers))
         await db.commit()
     elif like == 0 and like_row is not None:
         await db.delete(like_row)
@@ -227,7 +227,7 @@ async def like_equipment(
         await db.execute(
             select(func.count())
             .select_from(Likes)
-            .where(Likes.id_equipment == id_equipment)
+            .where(Likes.id_routers == id_routers)
         )
     ).scalar_one()
     return {"like_count": count}
