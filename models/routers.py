@@ -1,10 +1,10 @@
 from sqlalchemy import Column, Integer, String, Text, TIMESTAMP, Float, func
 from db.base import Base
 
-class Equipment(Base):
-    __tablename__ = "equipment"
+class Router(Base):
+    __tablename__ = "routers"
 
-    id_equipment = Column(Integer, primary_key=True)
+    id_routers = Column(Integer, primary_key=True)
     title = Column(String(100), nullable=False)
     standard = Column(String(50), nullable=True)
     max_speed = Column(Integer, nullable=True)

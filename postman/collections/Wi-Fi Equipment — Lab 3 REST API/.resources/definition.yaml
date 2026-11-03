@@ -1,0 +1,13 @@
+$kind: collection
+description: |-
+  Коллекция из 10 запросов (FastAPI, все адреса с префиксом /api).
+
+  Домен услуги (7 методов) + Домен пользователя (3 метода).
+
+  Перед прогонкой: docker compose up -d, alembic upgrade head, uvicorn main:app --reload.
+  Текущий пользователь-создатель зафиксирован константой (singleton): USER_ID=1, USERNAME=user_0.
+
+  В запросе «POST Добавление» в полях image и video выберите файлы (тип File): postman/test.png и postman/test.mp4. Имена файлов (латиница, uuid) сохраняются в БД, сами файлы — в MinIO. id созданной услуги сохраняется в {{equipment_id}} и подхватывается запросами PUT/DELETE/like.
+variables:
+  base_url: http://127.0.0.1:8000
+  equipment_id: ""

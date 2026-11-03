@@ -1,3 +1,4 @@
+import json
 import uuid
 from io import BytesIO
 
@@ -18,6 +19,19 @@ BUCKET = settings.MINIO_BUCKET
 def ensure_bucket() -> None:
     if not client.bucket_exists(BUCKET):
         client.make_bucket(BUCKET)
+    # Публичное чтение: SPA загружает картинки и видео напрямую из MinIO.
+    policy = {
+        "Version": "2012-10-17",
+        "Statement": [
+            {
+                "Effect": "Allow",
+                "Principal": {"AWS": ["*"]},
+                "Action": ["s3:GetObject"],
+                "Resource": [f"arn:aws:s3:::{BUCKET}/*"],
+            }
+        ],
+    }
+    client.set_bucket_policy(BUCKET, json.dumps(policy))
 
 
 def upload_file(file_bytes: bytes, original_name: str) -> str:
@@ -27,5 +41,8 @@ def upload_file(file_bytes: bytes, original_name: str) -> str:
     return filename
 
 
-def file_url(filename: str) -> str:
+def file_url(filename: str | None) -> str | None:
+    """Имя файла из БД -> полный адрес в MinIO (старые записи уже хранят полный адрес)."""
+    if not filename or filename.startswith(("http://", "https://")):
+        return filename
     return f"{settings.MINIO_URL}/{BUCKET}/{filename}"

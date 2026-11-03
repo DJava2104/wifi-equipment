@@ -1,0 +1,21 @@
+$kind: http-request
+name: GET — список с фильтрацией (is_creator 0/1)
+description: Список только опубликованных услуг с фильтрацией на бэкенде по частоте. Поле is_creator (0/1) — совпадает ли создатель услуги с текущим пользователем.
+url: "{{base_url}}/api/equipments?freq_min=2.4&freq_max=6.0"
+method: GET
+queryParams:
+  freq_min: "2.4"
+  freq_max: "6.0"
+auth:
+  type: noauth
+scripts:
+  - type: afterResponse
+    code: |-
+      pm.test('Статус 200', () => pm.response.to.have.status(200));
+      const data = pm.response.json();
+      pm.test('Список опубликованных', () => pm.expect(data).to.be.an('array'));
+      pm.test('Признак is_creator (0/1)', () => {
+        data.forEach(e => pm.expect(e).to.have.property('is_creator'));
+      });
+    language: text/javascript
+order: 1000

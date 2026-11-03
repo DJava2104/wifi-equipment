@@ -1,0 +1,13 @@
+$kind: http-request
+description: "Мягкое удаление (soft delete) — только услуг этого пользователя. Записи в статусе «удален» на клиент не передаются. Ответ: 200, пустое тело."
+url: "{{base_url}}/api/equipment/{{equipment_id}}"
+method: DELETE
+auth:
+  type: noauth
+scripts:
+  - type: afterResponse
+    code: |-
+      pm.test('Статус 200', () => pm.response.to.have.status(200));
+      pm.test('Пустое тело', () => pm.expect(pm.response.text()).to.eql(''));
+    language: text/javascript
+order: 6000

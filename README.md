@@ -1,11 +1,11 @@
 # Методические указания по выполнению лабораторной работы №4
 ## FastAPI (Python, FastAPI, SQLAlchemy async, Jinja2, куки + Redis, Swagger)
 
-Веб-сервис «Wi-Fi Equipment» — REST API каталога Wi-Fi оборудования. В лабораторной работе №4 бэкенд дополняется:
+Веб-сервис «Wi-Fi Routers» — REST API каталога Wi-Fi оборудования. В лабораторной работе №4 бэкенд дополняется:
 
 - **Регистрацией и аутентификацией через куки (сессии в Redis)**,
 - **Моделями доступа**: без авторизации — только чтение (GET), с авторизацией — методы создателя,
-- **Автозаполнением создателя** в таблице `equipment` из текущей сессии (вместо константы),
+- **Автозаполнением создателя** в таблице `routers` из текущей сессии (вместо константы),
 - **Swagger-документацией** с cookie-авторизацией (Authorize),
 - **Postman-коллекцией** с заголовком `Cookie` и проверками 401/403.
 
@@ -120,7 +120,7 @@ SESSION_TTL=3600
 | `core/session.py` | **новый** — session store в Redis (create / get / destroy) |
 | `api/deps.py` | **переписан** — константа `USER_ID=1` заменена на куку sessionId → Redis → пользователь из БД; `get_optional_user`, `require_user`, `ensure_owner` |
 | `api/user.py` | register/login/logout вместо заглушек, установка HttpOnly-куки |
-| `api/equipment.py` | guard'ы на методах создателя, `creator` из сессии, статусы 401/403/404/409, Swagger-описания |
+| `api/routers.py` | guard'ы на методах создателя, `creator` из сессии, статусы 401/403/404/409, Swagger-описания |
 | `api/schemas.py` | **новый** — Pydantic-модели ответов для Swagger |
 | `main.py` | описание API, версия, `persistAuthorization` в Swagger UI |
 | `docker-compose.yml`, `.env`, `core/config.py`, `requirements.txt` | Redis + `redis==8.1.0` |
@@ -207,9 +207,9 @@ async def require_user(session_id: str | None = Depends(cookie_scheme), db: Asyn
     return user
 
 
-def ensure_owner(user: Users, equipment_creator: str) -> None:
+def ensure_owner(user: Users, router_creator: str) -> None:
     """Авторизация: операции с услугой — только её создателю, иначе 403."""
-    if user.username != equipment_creator:
+    if user.username != router_creator:
         raise HTTPException(status_code=403, detail="Недостаточно прав: услуга принадлежит другому пользователю")
 ```
 
@@ -257,24 +257,24 @@ async def logout(response: Response, user=Depends(require_user), session_id=Depe
 
 ## Домен услуги: guard'ы, автозаполнение creator, статусы
 
-`api/equipment.py`:
+`api/routers.py`:
 
 | Метод | URL | Доступ | Коды ответа |
 |---|---|---|---|
-| GET | `/api/equipments?freq_min=&freq_max=` | открытый | 200 (`is_creator` 0/1) |
-| GET | `/api/equipment` | открытый | 200 (`like_count`, `is_liked` 0/1) |
-| GET | `/api/equipment/{id}?next=true` | открытый | 200 / 404 |
-| GET | `/api/equipment/draft` | создатель | 200 / **401** |
-| POST | `/api/equipment` | создатель | 200 / **401** / 409 (уже есть черновик) |
-| PUT | `/api/equipment/{id}` | создатель | 200 / **401** / **403** (чужая) / 404 / 409 (не черновик) |
-| DELETE | `/api/equipment/{id}` | создатель | 200 / **401** / **403** / 404 |
-| POST | `/api/equipment/{id}` (like) | создатель | 200 / **401** / 404 |
+| GET | `/api/routers?freq_min=&freq_max=` | открытый | 200 (`is_creator` 0/1) |
+| GET | `/api/router` | открытый | 200 (`like_count`, `is_liked` 0/1) |
+| GET | `/api/router/{id}?next=true` | открытый | 200 / 404 |
+| GET | `/api/router/draft` | создатель | 200 / **401** |
+| POST | `/api/router` | создатель | 200 / **401** / 409 (уже есть черновик) |
+| PUT | `/api/router/{id}` | создатель | 200 / **401** / **403** (чужая) / 404 / 409 (не черновик) |
+| DELETE | `/api/router/{id}` | создатель | 200 / **401** / **403** / 404 |
+| POST | `/api/router/{id}` (like) | создатель | 200 / **401** / 404 (нет или не опубликована) / 422 (like не 0/1) |
 
 Автозаполнение пользователя при создании услуги и публикация:
 
 ```python
-@router.post("/equipment", response_model=EquipmentSchema, summary="Создать черновик услуги (с картинкой и видео)")
-async def create_equipment(
+@router.post("/router", response_model=RouterSchema, summary="Создать черновик услуги (с картинкой и видео)")
+async def create_router(
     title: str = Form(...),
     image: UploadFile = File(...),
     video: UploadFile = File(...),
@@ -282,7 +282,7 @@ async def create_equipment(
     db: AsyncSession = Depends(get_db),
 ):
     ...
-    equipment = Equipment(
+    item = Router(
         title=title,
         image_url=image_url,
         video_url=video_url,
@@ -292,18 +292,18 @@ async def create_equipment(
     )
 
 
-@router.put("/equipment/{id_equipment}", response_model=EquipmentSchema, summary="Опубликовать услугу")
-async def publish_equipment(id_equipment: int, description=Form(...), frequency=Form(...), ...,
+@router.put("/router/{id_routers}", response_model=RouterSchema, summary="Опубликовать услугу")
+async def publish_router(id_routers: int, description=Form(...), frequency=Form(...), ...,
                             user: Users = Depends(require_user), db=Depends(get_db)):
-    equipment = ...
-    if equipment is None:
+    item = ...
+    if item is None:
         raise HTTPException(status_code=404, detail="Услуга не найдена")
-    ensure_owner(user, equipment.creator)     # ← чужая услуга → 403
-    if equipment.status != DRAFT:
+    ensure_owner(user, item.creator)     # ← чужая услуга → 403
+    if item.status != DRAFT:
         raise HTTPException(status_code=409, detail="Публикация возможна только из статуса «черновик»")
     ...
-    equipment.status = PUBLISHED
-    equipment.date_formed = datetime.now()
+    item.status = PUBLISHED
+    item.date_formed = datetime.now()
 ```
 
 В открытых GET-методах признаки считаются для текущего пользователя (или для гостя):
@@ -321,7 +321,7 @@ async def publish_equipment(id_equipment: int, description=Form(...), frequency=
 
 ```python
 app = FastAPI(
-    title="Wi-Fi Equipment API",
+    title="Wi-Fi Router API",
     description=DESCRIPTION,          # правила доступа + как получить куку
     version="4.0.0",
     lifespan=lifespan,
@@ -336,7 +336,7 @@ app = FastAPI(
 1. Откройте <http://127.0.0.1:8000/docs> **в режиме инкогнито** (чистые куки).
 2. `POST /api/register` → 200 с `{id_user, username}`.
 3. `POST /api/login` → в ответе `Set-Cookie: sessionId=...; HttpOnly` — браузер запомнит куку, и все дальнейшие запросы из этой вкладки уже авторизованы.
-4. Анонимные GET (`/api/equipments`, `/api/equipment`) работают и без куки.
+4. Анонимные GET (`/api/routers`, `/api/router`) работают и без куки.
 5. Методы под замком без куки вернут 401; с кукой — 200.
 6. Альтернатива: нажмите **Authorize** и вставьте значение `sessionId` из вкладки Application → Cookies (Postman/Insomnia: заголовок `Cookie: sessionId=значение`).
 
@@ -355,7 +355,7 @@ app = FastAPI(
 
 - `{{base_url}}` = `http://127.0.0.1:8000` — авторизованные запросы с заголовком `Cookie: sessionId={{session_id}}`;
 - `{{anon_url}}` = `http://localhost:8000` — анонимные/гостевые запросы (куки-джар Postman на них не распространяется, поэтому 401 честный);
-- после `POST /api/login` значение куки из `Set-Cookie` сохраняется в `{{session_id}}`; `id` созданной услуги — в `{{equipment_id}}`.
+- после `POST /api/login` значение куки из `Set-Cookie` сохраняется в `{{session_id}}`; `id` созданной услуги — в `{{router_id}}`.
 
 Прогон по порядку: регистрация → логин → список (без куки, 200) → черновик/создание без куки (401) → создание с кукой (200, `creator` = username) → поля черновика → публикация без куки (401) → публикация с кукой (200, статус «опубликован») → лента без ид и по ид `?next=true` (без куки) → лайк → удаление → logout → повторный запрос с той же кукой (401).
 
@@ -387,7 +387,7 @@ docker exec redis_session redis-cli TTL "session:6099e7c01da54dcebd367d64455dfe2
 |---|---|
 | 1 | Swagger (инкогнито): `POST /api/register` → 200 |
 | 2 | Swagger: `POST /api/login` → 200, в ответе `Set-Cookie: sessionId=...; HttpOnly` |
-| 3 | Swagger: список услуг после логина (GET `/api/equipments` → 200) |
+| 3 | Swagger: список услуг после логина (GET `/api/routers` → 200) |
 | 4 | Postman: GET списка без токена/куки → 200 (работает независимо) |
 | 5 | Postman: GET ленты без токена/куки → 200 |
 | 6 | Postman/Insomnia: PUT публикации **без куки** → 401 (для чужой услуги — 403) |
@@ -395,7 +395,7 @@ docker exec redis_session redis-cli TTL "session:6099e7c01da54dcebd367d64455dfe2
 | 8 | cmd: `redis-cli KEYS "session:*"` и `GET session:<id>` — в ключе сессии пользователь; после logout ключ удалён |
 | 9 | StarUML: sequence-диаграмма, у сообщений в properties заполнено поле `signature` (переиспользовано из диаграммы классов) |
 
-Sequence-диаграмма (StarUML) — весь набор HTTP-запросов бизнес-процесса без БД и нативного приложения: аутентификация → GET списка с фильтром → добавление услуги с картинкой и видео → поля черновика → публикация → лента без ид → лента по ид `?next=true` → лайк. В качестве Lifeline — домены, в `arguments` сообщений — ключевые входные/выходные данные (username/password; sessionId; title/image/video; id_equipment и т.д.).
+Sequence-диаграмма (StarUML) — весь набор HTTP-запросов бизнес-процесса без БД и нативного приложения: аутентификация → GET списка с фильтром → добавление услуги с картинкой и видео → поля черновика → публикация → лента без ид → лента по ид `?next=true` → лайк. В качестве Lifeline — домены, в `arguments` сообщений — ключевые входные/выходные данные (username/password; sessionId; title/image/video; id_routers и т.д.).
 
 ---
 

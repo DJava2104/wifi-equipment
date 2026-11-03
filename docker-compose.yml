@@ -18,7 +18,7 @@ services:
     environment:
       POSTGRES_USER: djava
       POSTGRES_PASSWORD: java2004
-      POSTGRES_DB: equipment_db
+      POSTGRES_DB: routers_db
     ports:
       - "5433:5432"
     volumes:

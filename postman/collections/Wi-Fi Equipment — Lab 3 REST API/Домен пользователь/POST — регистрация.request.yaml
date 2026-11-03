@@ -1,0 +1,26 @@
+$kind: http-request
+description: "Регистрация. Form-data: username, password. Логин уникален (генерируется через {{$randomUUID}}, чтобы повторный прогон не падал). Дубль логина → 500."
+url: "{{base_url}}/api/register"
+method: POST
+body:
+  type: formdata
+  content:
+    - type: text
+      key: username
+      value: student_{{$randomUUID}}
+    - type: text
+      key: password
+      value: secret123
+auth:
+  type: noauth
+scripts:
+  - type: afterResponse
+    code: |-
+      pm.test('Статус 200', () => pm.response.to.have.status(200));
+      const data = pm.response.json();
+      pm.test('Возвращает id_user и username', () => {
+        pm.expect(data).to.have.property('id_user');
+        pm.expect(data).to.have.property('username');
+      });
+    language: text/javascript
+order: 1000

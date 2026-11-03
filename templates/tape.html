@@ -17,11 +17,11 @@
             <div class="feed-card">
 
                 <div class="feed-media">
-                    {% set img_src = equipment.image_url if equipment.image_url else '/static/img/default.svg' %}
-                    {% set video_src = equipment.video_url if equipment.video_url else '/static/img/default.mp4' %}
+                    {% set img_src = router.image_url if router.image_url else '/static/img/default.svg' %}
+                    {% set video_src = router.video_url if router.video_url else '/static/img/default.mp4' %}
                     <img class="feed-img"
                          src="{{ img_src }}"
-                         alt="{{ equipment.title }}"
+                         alt="{{ router.title }}"
                          onerror="this.onerror=null; this.src='/static/img/default.svg';">
                     <video autoplay loop muted playsinline
                            poster="{{ img_src }}"
@@ -35,30 +35,26 @@
                 <div class="feed-bottom">
                     <div class="feed-side">
                         <div class="stat">
-                            <span class="stat-label">Макс. скорость</span>
-                            <span class="stat-value stat-speed">{{ equipment.max_speed or '—' }} Мбит/с</span>
+                            <span class="stat-label">Частота</span>
+                            <span class="stat-value">{{ router.frequency | ghz }}</span>
                         </div>
                         <div class="stat">
-                            <span class="stat-label">Диапазон</span>
-                            <span class="stat-value">{{ equipment.band or (equipment.frequency | ghz) }}</span>
-                        </div>
-                        <div class="stat">
-                            <span class="stat-label">Антенны</span>
-                            <span class="stat-value">{{ equipment.antennas or '—' }}</span>
+                            <span class="stat-label">Макс. количество устройств</span>
+                            <span class="stat-value">{{ router.max_speed or '—' }}</span>
                         </div>
 
                         <div class="feed-actions">
-                            <a href="/feed/{{ next_equipment.id_equipment }}" class="btn-next" title="Следующее оборудование">➡️</a>
-                            <span class="like-btn">♥️{{ equipment.likes }}</span>
+                            <a href="/feed/{{ next_router.id_routers }}" class="btn-next" title="Следующее оборудование">➡️</a>
+                            <span class="like-btn">♥️{{ router.likes }}</span>
                         </div>
                     </div>
 
                     <div class="feed-info">
-                        <h2 class="feed-title">{{ equipment.title }}</h2>
-                        <p class="feed-standard">{{ equipment.standard or 'Wi-Fi' }}</p>
-                        {% if equipment.description %}
+                        <h2 class="feed-title">{{ router.title }}</h2>
+                        <p class="feed-standard">{{ router.standard or 'Wi-Fi' }}</p>
+                        {% if router.description %}
                         <input type="checkbox" id="desc-toggle" class="desc-toggle-input">
-                        <p class="feed-desc-text">{{ equipment.description }}</p>
+                        <p class="feed-desc-text">{{ router.description }}</p>
                         <label for="desc-toggle" class="desc-toggle-label desc-toggle-more">Еще</label>
                         <label for="desc-toggle" class="desc-toggle-label desc-toggle-less">Свернуть</label>
                         {% else %}

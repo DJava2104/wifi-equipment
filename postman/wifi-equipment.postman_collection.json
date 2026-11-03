@@ -2,7 +2,7 @@
   "info": {
     "_postman_id": "wifi-equipment-api-0004",
     "name": "Wi-Fi Equipment — Lab 4 REST API",
-    "description": "Коллекция лабораторной работы №4: аутентификация через сессию в Redis + HttpOnly-кука sessionId.\n\nПорядок прогонки:\n1. «Домен пользователь»: регистрация (логин/пароль сохраняются в {{username}}/{{password}}), аутентификация (значение куки из Set-Cookie сохраняется в {{session_id}}).\n2. «Домен услуги»: сначала анонимные запросы на {{anon_url}} (куки-джар Postman относится к base_url, поэтому гостевые запросы реально идут без сессии → 401), затем запросы с авторизацией на {{base_url}} через заголовок Cookie: sessionId={{session_id}}.\n3. «Деавторизация»: logout уничтожает сессию в Redis, повторный запрос с той же кукой → 401.\n\nТребования: docker compose up -d (postgres, minio, redis), alembic upgrade head, uvicorn main:app --reload.\nВ запросах «POST — добавление» в полях image и video выберите файлы (тип File): postman/test.png и postman/test.mp4. id созданной услуги сохраняется в {{equipment_id}}.\n\nБез авторизации доступно только чтение (GET), с авторизацией — методы создателя (создание, публикация, удаление, лайк, черновик).",
+    "description": "Коллекция лабораторной работы №4: аутентификация через сессию в Redis + HttpOnly-кука sessionId.\n\nПорядок прогонки:\n1. «Домен пользователь»: регистрация (логин/пароль сохраняются в {{username}}/{{password}}), аутентификация (значение куки из Set-Cookie сохраняется в {{session_id}}).\n2. «Домен услуги»: сначала анонимные запросы на {{anon_url}} (куки-джар Postman относится к base_url, поэтому гостевые запросы реально идут без сессии → 401), затем запросы с авторизацией на {{base_url}} через заголовок Cookie: sessionId={{session_id}}.\n3. «Деавторизация»: logout уничтожает сессию в Redis, повторный запрос с той же кукой → 401.\n\nТребования: docker compose up -d (postgres, minio, redis), alembic upgrade head, uvicorn main:app --reload.\nВ запросах «POST — добавление» в полях image и video выберите файлы (тип File): postman/test.png и postman/test.mp4. id созданной услуги сохраняется в {{router_id}}.\n\nБез авторизации доступно только чтение (GET), с авторизацией — методы создателя (создание, публикация, удаление, лайк, черновик).",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
   },
   "variable": [
@@ -27,7 +27,7 @@
       "value": ""
     },
     {
-      "key": "equipment_id",
+      "key": "router_id",
       "value": ""
     }
   ],
@@ -187,13 +187,13 @@
             "method": "GET",
             "header": [],
             "url": {
-              "raw": "{{anon_url}}/api/equipments?freq_min=2.4&freq_max=6.0",
+              "raw": "{{anon_url}}/api/routers?freq_min=2.4&freq_max=6.0",
               "host": [
                 "{{anon_url}}"
               ],
               "path": [
                 "api",
-                "equipments"
+                "routers"
               ],
               "query": [
                 {
@@ -230,13 +230,13 @@
             "method": "GET",
             "header": [],
             "url": {
-              "raw": "{{anon_url}}/api/equipment/draft",
+              "raw": "{{anon_url}}/api/router/draft",
               "host": [
                 "{{anon_url}}"
               ],
               "path": [
                 "api",
-                "equipment",
+                "router",
                 "draft"
               ]
             },
@@ -273,13 +273,13 @@
               ]
             },
             "url": {
-              "raw": "{{anon_url}}/api/equipment",
+              "raw": "{{anon_url}}/api/router",
               "host": [
                 "{{anon_url}}"
               ],
               "path": [
                 "api",
-                "equipment"
+                "router"
               ]
             },
             "description": "POST без сессии → 401, услуга не создаётся."
@@ -309,13 +309,13 @@
             "method": "GET",
             "header": [],
             "url": {
-              "raw": "{{anon_url}}/api/equipment",
+              "raw": "{{anon_url}}/api/router",
               "host": [
                 "{{anon_url}}"
               ],
               "path": [
                 "api",
-                "equipment"
+                "router"
               ]
             },
             "description": "Лента с начала: первое опубликованное устройство + like_count + is_liked (0 для гостя)."
@@ -336,7 +336,7 @@
                   "  pm.expect(body.image_url).to.match(/^[0-9a-f-]+\\.(png|jpg|jpeg)$/i);",
                   "  pm.expect(body.video_url).to.match(/^[0-9a-f-]+\\.mp4$/i);",
                   "});",
-                  "pm.environment.set('equipment_id', String(body.id_equipment));"
+                  "pm.environment.set('router_id', String(body.id_routers));"
                 ],
                 "type": "text/javascript"
               }
@@ -374,16 +374,16 @@
               ]
             },
             "url": {
-              "raw": "{{base_url}}/api/equipment",
+              "raw": "{{base_url}}/api/router",
               "host": [
                 "{{base_url}}"
               ],
               "path": [
                 "api",
-                "equipment"
+                "router"
               ]
             },
-            "description": "Метод создателя (заголовок Cookie: sessionId={{session_id}}). Файлы кладутся в MinIO, в БД — их латинские имена. creator автоматически заполняется из сессии. Не более одного черновика на пользователя → повторный POST даёт 409. id сохраняется в {{equipment_id}}."
+            "description": "Метод создателя (заголовок Cookie: sessionId={{session_id}}). Файлы кладутся в MinIO, в БД — их латинские имена. creator автоматически заполняется из сессии. Не более одного черновика на пользователя → повторный POST даёт 409. id сохраняется в {{router_id}}."
           }
         },
         {
@@ -396,7 +396,7 @@
                   "pm.test('Статус 200', () => pm.response.to.have.status(200));",
                   "const body = pm.response.json();",
                   "pm.test('Статус черновик', () => pm.expect(body.status).to.eql('черновик'));",
-                  "pm.test('Это созданный черновик', () => pm.expect(String(body.id_equipment)).to.eql(pm.environment.get('equipment_id')));",
+                  "pm.test('Это созданный черновик', () => pm.expect(String(body.id_routers)).to.eql(pm.environment.get('router_id')));",
                   "pm.test('Поля черновика', () => {",
                   "  pm.expect(body).to.have.property('title');",
                   "  pm.expect(body).to.have.property('image_url');",
@@ -420,13 +420,13 @@
               }
             ],
             "url": {
-              "raw": "{{base_url}}/api/equipment/draft",
+              "raw": "{{base_url}}/api/router/draft",
               "host": [
                 "{{base_url}}"
               ],
               "path": [
                 "api",
-                "equipment",
+                "router",
                 "draft"
               ]
             },
@@ -468,14 +468,14 @@
               ]
             },
             "url": {
-              "raw": "{{anon_url}}/api/equipment/{{equipment_id}}",
+              "raw": "{{anon_url}}/api/router/{{router_id}}",
               "host": [
                 "{{anon_url}}"
               ],
               "path": [
                 "api",
-                "equipment",
-                "{{equipment_id}}"
+                "router",
+                "{{router_id}}"
               ]
             },
             "description": "Публикация услуги без авторизации → 401 (или 403, если бы кука была чужой). Выполняется до публикации с кукой, поэтому черновик остаётся нетронутым."
@@ -546,14 +546,14 @@
               ]
             },
             "url": {
-              "raw": "{{base_url}}/api/equipment/{{equipment_id}}",
+              "raw": "{{base_url}}/api/router/{{router_id}}",
               "host": [
                 "{{base_url}}"
               ],
               "path": [
                 "api",
-                "equipment",
-                "{{equipment_id}}"
+                "router",
+                "{{router_id}}"
               ]
             },
             "description": "Публикация своего черновика с кукой: описание/частота/стандарт/скорость/антенны записываются, band вычисляется, статус → «опубликован», date_formed = сейчас. Чужую услугу нельзя опубликовать → 403, повторно → 409."
@@ -585,14 +585,14 @@
             "method": "GET",
             "header": [],
             "url": {
-              "raw": "{{anon_url}}/api/equipment/{{equipment_id}}?next=true",
+              "raw": "{{anon_url}}/api/router/{{router_id}}?next=true",
               "host": [
                 "{{anon_url}}"
               ],
               "path": [
                 "api",
-                "equipment",
-                "{{equipment_id}}"
+                "router",
+                "{{router_id}}"
               ],
               "query": [
                 {
@@ -642,14 +642,14 @@
               ]
             },
             "url": {
-              "raw": "{{base_url}}/api/equipment/{{equipment_id}}",
+              "raw": "{{base_url}}/api/router/{{router_id}}",
               "host": [
                 "{{base_url}}"
               ],
               "path": [
                 "api",
-                "equipment",
-                "{{equipment_id}}"
+                "router",
+                "{{router_id}}"
               ]
             },
             "description": "Лайк от имени текущего пользователя (id берётся из сессии, а не из константы). like=1 — поставить, like=0 — отменить."
@@ -681,14 +681,14 @@
               }
             ],
             "url": {
-              "raw": "{{base_url}}/api/equipment/{{equipment_id}}",
+              "raw": "{{base_url}}/api/router/{{router_id}}",
               "host": [
                 "{{base_url}}"
               ],
               "path": [
                 "api",
-                "equipment",
-                "{{equipment_id}}"
+                "router",
+                "{{router_id}}"
               ]
             },
             "description": "Мягкое удаление своей услуги (status → «удалён»), пустое тело ответа. Чужую удалить нельзя → 403. Запускается последним в папке, чтобы тестовая услуга не оставалась в БД."
@@ -763,13 +763,13 @@
               }
             ],
             "url": {
-              "raw": "{{base_url}}/api/equipment/draft",
+              "raw": "{{base_url}}/api/router/draft",
               "host": [
                 "{{base_url}}"
               ],
               "path": [
                 "api",
-                "equipment",
+                "router",
                 "draft"
               ]
             },

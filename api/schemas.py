@@ -12,8 +12,8 @@ class AuthResponseSchema(BaseModel):
     user: UserSchema = Field(description="Аутентифицированный пользователь")
 
 
-class EquipmentSchema(BaseModel):
-    id_equipment: int = Field(description="Идентификатор услуги")
+class RouterSchema(BaseModel):
+    id_routers: int = Field(description="Идентификатор услуги")
     title: str = Field(description="Название")
     standard: str | None = Field(default=None, description="Стандарт Wi-Fi")
     max_speed: int | None = Field(default=None, description="Макс. скорость, Мбит/с")
@@ -30,11 +30,11 @@ class EquipmentSchema(BaseModel):
     date_completed: datetime | None = Field(default=None, description="Дата удаления")
 
 
-class EquipmentListItemSchema(EquipmentSchema):
+class RouterListItemSchema(RouterSchema):
     is_creator: int = Field(description="1 — текущий пользователь является создателем, иначе 0")
 
 
-class FeedItemSchema(EquipmentSchema):
+class FeedItemSchema(RouterSchema):
     like_count: int = Field(description="Количество лайков")
     is_liked: int = Field(description="1 — лайк текущего пользователя, иначе 0")
 

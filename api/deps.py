@@ -69,9 +69,9 @@ async def require_user(
     return user
 
 
-def ensure_owner(user: Users, equipment_creator: str) -> None:
+def ensure_owner(user: Users, router_creator: str) -> None:
     """Авторизация: выполнять операции с услугой может только её создатель."""
-    if user.username != equipment_creator:
+    if user.username != router_creator:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Недостаточно прав: услуга принадлежит другому пользователю",

@@ -1,4 +1,4 @@
-equipment_db = [
+routers_db = [
     {
         "id": 1,
         "title": "TP-Link Archer AX73",
@@ -92,7 +92,7 @@ equipment_db = [
 ]
 
 
-def get_filtered_equipment(speed_min=None):
+def get_filtered_routers(speed_min=None):
     if speed_min is None:
-        return equipment_db
-    return [e for e in equipment_db if e["max_speed"] >= speed_min]
+        return routers_db
+    return [e for e in routers_db if e["max_speed"] >= speed_min]

@@ -1,0 +1,33 @@
+$kind: http-request
+description: "Публикация (смена статуса черновик → опубликован). Только своя услуга, статус должен быть «черновик». Form-data: description, frequency, standard, max_speed, antennas. Статусы нельзя менять с любого на любой — вернуть в черновик нельзя."
+url: "{{base_url}}/api/equipment/{{equipment_id}}"
+method: PUT
+body:
+  type: formdata
+  content:
+    - type: text
+      key: description
+      value: Двухдиапазонный роутер Wi-Fi 6
+    - type: text
+      key: frequency
+      value: "5.0"
+    - type: text
+      key: standard
+      value: Wi-Fi 6 (802.11ax)
+    - type: text
+      key: max_speed
+      value: "4804"
+    - type: text
+      key: antennas
+      value: "6"
+auth:
+  type: noauth
+scripts:
+  - type: afterResponse
+    code: |-
+      pm.test('Статус 200', () => pm.response.to.have.status(200));
+      const data = pm.response.json();
+      pm.test('Статус опубликован', () => pm.expect(data.status).to.eql('опубликован'));
+      pm.test('Дата публикации заполнена', () => pm.expect(data.date_formed).to.not.eql(null));
+    language: text/javascript
+order: 5000

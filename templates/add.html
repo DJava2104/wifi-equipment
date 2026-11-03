@@ -16,25 +16,18 @@
         </header>
 
         <main class="screen-scroll">
-            {% if d.id_equipment %}
+            {% if d.id_routers %}
             <form class="add-form" method="post" action="/publish">
                 <p class="section-label">Параметры устройства</p>
 
                 <label class="field">
-                    <span>Название</span>
-                    <input type="text" value="{{ d.title or '' }}" readonly>
-                </label>
-
-                <div class="add-section">
-                    <p>Описание</p>
-                    <textarea name="description" rows="4" placeholder="Краткое описание" required>{{ d.description or '' }}</textarea>
-                </div>
-
-                <p class="section-label">Диапазон и антенны</p>
-
-                <label class="field">
                     <span>Частота (ГГц)</span>
                     <input type="number" step="0.1" min="0" name="frequency" value="{{ d.frequency or '' }}" placeholder="5.0" required>
+                </label>
+
+                <label class="field">
+                    <span>Максимальное количество устройств</span>
+                    <input type="number" min="1" step="1" name="max_speed" value="{{ d.max_speed or '' }}" placeholder="32">
                 </label>
 
                 <label class="field">
@@ -43,23 +36,23 @@
                 </label>
 
                 <label class="field">
-                    <span>Макс. скорость (Мбит/с)</span>
-                    <input type="number" min="1" step="1" name="max_speed" value="{{ d.max_speed or '' }}" placeholder="2400">
+                    <span>Антенны</span>
+                    <input type="text" name="antennas" value="{{ d.antennas or '' }}" placeholder="4 антенны">
                 </label>
 
                 <label class="field">
-                    <span>Антенны</span>
-                    <input type="text" name="antennas" value="{{ d.antennas or '' }}" placeholder="4 антенны">
+                    <span>Описание</span>
+                    <textarea name="description" rows="4" placeholder="Краткое описание" required>{{ d.description or '' }}</textarea>
                 </label>
 
                 <button type="submit" class="btn">Опубликовать</button>
             </form>
             {% else %}
             <form class="add-form" method="post" action="/add">
-                <div class="add-section">
+                <div class="add-section upload-section">
                     <label class="drop-zone">
                         <input type="file" accept="image/*">
-                        <span>📷<br>Изображение</span>
+                        <span>📷<br>Фотография</span>
                     </label>
                     <label class="drop-zone">
                         <input type="file" accept="video/*">
@@ -73,11 +66,6 @@
                     <span>Название</span>
                     <input type="text" name="title" value="{{ d.title or '' }}" placeholder="Название устройства" required>
                 </label>
-
-                <div class="add-section">
-                    <p>Описание</p>
-                    <textarea name="description" rows="4" placeholder="Краткое описание" required>{{ d.description or '' }}</textarea>
-                </div>
 
                 <button type="submit" class="btn">Далее</button>
             </form>

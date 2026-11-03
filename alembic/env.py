@@ -8,7 +8,7 @@ from alembic import context
 from core.config import settings
 from db.base import Base
 # Импортируйте здесь все ваши модели, чтобы Alembic их увидел!
-from models.equipment import Equipment
+from models.routers import Router
 from models.users import Users
 from models.likes import Likes
 
