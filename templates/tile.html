@@ -36,7 +36,7 @@
                 {% for e in routers_list %}
                 <div class="eq-card-wrap">
                     <a href="/feed/{{ e.id_routers }}" class="eq-card">
-                        {% set card_img = e.image_url if e.image_url else '/static/img/default.svg' %}
+                        {% set card_img = (e.image_url | media) if e.image_url else '/static/img/default.svg' %}
                         <img src="{{ card_img }}" alt="{{ e.title }}" class="eq-card-img"
                              onerror="this.onerror=null; this.src='/static/img/default.svg';">
                         <h3 class="eq-card-title">{{ e.title }}</h3>
@@ -45,9 +45,11 @@
                         <p class="eq-card-speed">{{ e.max_speed or '—' }} устройств</p>
                         <p class="eq-card-likes">♥️{{ likes_map.get(e.id_routers, 0) }}</p>
                     </a>
+                    {% if user and e.creator == user.username %}
                     <form method="post" action="/routers/{{ e.id_routers }}/delete">
                         <button type="submit" class="delete-btn">Удалить</button>
                     </form>
+                    {% endif %}
                 </div>
                 {% else %}
                 <p class="empty-hint">Оборудование не найдено</p>

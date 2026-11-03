@@ -1,19 +1,22 @@
 from datetime import datetime
 
-from fastapi import APIRouter, Request, Depends, Form, Query
+from fastapi import APIRouter, Request, Depends, File, Form, Query, UploadFile
 from fastapi.responses import RedirectResponse
 from fastapi.templating import Jinja2Templates
 from sqlalchemy import select, text, func
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from api.deps import get_optional_user
 from db.session import get_db
+from minio_client import file_url, upload_file
 from models.routers import Router
 from models.likes import Likes
+from models.users import Users
 
-router = APIRouter()
+router = APIRouter(include_in_schema=False)
 templates = Jinja2Templates(directory="templates")
 
-CURRENT_USER = "user_0"
+DEFAULT_HTML_USER = "user_0"
 
 FREQ_MIN = 2.4
 FREQ_MAX = 6.0
@@ -29,6 +32,7 @@ def ghz(value) -> str:
 
 
 templates.env.filters["ghz"] = ghz
+templates.env.filters["media"] = file_url
 
 
 async def get_draft(user: str, db: AsyncSession):
@@ -62,6 +66,18 @@ async def get_next_published_id(db: AsyncSession, router_id: int):
         {"status": PUBLISHED, "id": router_id},
     )
     return result.scalar()
+
+
+async def get_html_user(
+    user: Users | None = Depends(get_optional_user),
+    db: AsyncSession = Depends(get_db),
+) -> Users:
+    """HTML-страницы (лаб. 1–2): пользователь из сессии, если вход выполнен через /api/login,
+    иначе пользователь по умолчанию. JSON API (/api/...) работает строго по сессии."""
+    if user is not None:
+        return user
+    result = await db.execute(select(Users).where(Users.username == DEFAULT_HTML_USER))
+    return result.scalar_one()
 
 
 @router.get("/")
@@ -119,6 +135,7 @@ async def get_grid(
     request: Request,
     freq_min: float = Query(FREQ_MIN),
     freq_max: float = Query(FREQ_MAX),
+    user: Users = Depends(get_html_user),
     db: AsyncSession = Depends(get_db),
 ):
     low, high = sorted((freq_min, freq_max))
@@ -148,31 +165,42 @@ async def get_grid(
             "likes_map": likes_map,
             "freq_min": low,
             "freq_max": high,
+            "user": user,
         },
     )
 
 
 @router.get("/add")
-async def get_add_page(request: Request, db: AsyncSession = Depends(get_db)):
-    draft = await get_draft(CURRENT_USER, db)
+async def get_add_page(
+    request: Request,
+    user: Users = Depends(get_html_user),
+    db: AsyncSession = Depends(get_db),
+):
+    draft = await get_draft(user.username, db)
     return templates.TemplateResponse(
         request=request,
         name="add.html",
-        context={"draft": draft, "CURRENT_USER": CURRENT_USER},
+        context={"draft": draft, "user": user},
     )
 
 
 @router.post("/add")
 async def add_draft(
     title: str = Form(...),
+    image: UploadFile = File(...),
+    video: UploadFile = File(...),
+    user: Users = Depends(get_html_user),
     db: AsyncSession = Depends(get_db),
 ):
-    existing_draft = await get_draft(CURRENT_USER, db)
+    existing_draft = await get_draft(user.username, db)
     if existing_draft is None:
         new_router = Router(
             title=title,
-            creator=CURRENT_USER,
+            image_url=upload_file(await image.read(), image.filename),
+            video_url=upload_file(await video.read(), video.filename),
+            creator=user.username,
             status="черновик",
+            date_created=datetime.now(),
         )
         db.add(new_router)
         await db.commit()
@@ -186,9 +214,10 @@ async def publish_draft(
     standard: str = Form(""),
     max_speed: int | None = Form(None),
     antennas: str = Form(""),
+    user: Users = Depends(get_html_user),
     db: AsyncSession = Depends(get_db),
 ):
-    draft = await get_draft(CURRENT_USER, db)
+    draft = await get_draft(user.username, db)
     if draft is not None:
         draft.standard = standard or None
         draft.max_speed = max_speed
@@ -204,10 +233,18 @@ async def publish_draft(
 
 
 @router.post("/routers/{router_id}/delete")
-async def delete_router(router_id: int, db: AsyncSession = Depends(get_db)):
+async def delete_router(
+    router_id: int,
+    user: Users = Depends(get_html_user),
+    db: AsyncSession = Depends(get_db),
+):
+    # удалить можно только свою услугу
     await db.execute(
-        text("UPDATE routers SET status = 'удален' WHERE id_routers = :id"),
-        {"id": router_id},
+        text(
+            "UPDATE routers SET status = 'удален', date_completed = NOW() "
+            "WHERE id_routers = :id AND creator = :creator"
+        ),
+        {"id": router_id, "creator": user.username},
     )
     await db.commit()
     return RedirectResponse(url="/grid", status_code=303)

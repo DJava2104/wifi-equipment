@@ -87,7 +87,7 @@ async def get_routers(
     response_model=RouterSchema | None,
     summary="Черновик текущего пользователя",
     description=(
-        "Метод создателя: возвращает не более одной черновики текущего пользователя "
+        "Метод создателя: возвращает не более одного черновика текущего пользователя "
         "или null. Требуется кука sessionId."
     ),
     responses=AUTH_REQUIRED,
@@ -111,25 +111,16 @@ async def get_draft(
 @router.get(
     "/router",
     response_model=FeedItemSchema,
-    summary="Лента: текущая опубликованная услуга",
+    summary="Лента опубликованных услуг",
     description=(
-        "Открытый метод (без авторизации). Возвращает первое опубликованное "
-        "устройство (или по `id_routers`, если указан) + `like_count` и `is_liked`. "
-        "`next=true` — следующее после указанного с переходом по кругу."
-    ),
-)
-@router.get(
-    "/router/{id_routers}",
-    response_model=FeedItemSchema,
-    summary="Лента: опубликованная услуга по ид",
-    description=(
-        "Открытый метод (без авторизации). `next=true` — вернуть следующее "
-        "опубликованное после указанного (цикл). `is_liked` для гостя всегда 0."
+        "Открытый метод (без авторизации). Без `id_routers` — первая опубликованная "
+        "услуга, с `id_routers` — указанная; `next=true` — следующая после неё по кругу. "
+        "В ответе `like_count` и `is_liked` (0/1, для гостя всегда 0)."
     ),
     responses={404: {"description": "Нет опубликованных услуг или ид не найден"}},
 )
 async def get_router(
-    id_routers: int | None = None,
+    id_routers: int | None = Query(None, description="Ид текущей услуги ленты (необязательно)"),
     go_next: bool = Query(False, alias="next", description="Следующее после указанного (по кругу)"),
     user: Users | None = Depends(get_optional_user),
     db: AsyncSession = Depends(get_db),

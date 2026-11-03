@@ -1,13 +1,14 @@
 # Методические указания по выполнению лабораторной работы №4
-## FastAPI (Python, FastAPI, SQLAlchemy async, Jinja2, куки + Redis, Swagger)
+## FastAPI (Python, FastAPI, SQLAlchemy, Jinja2, куки + Redis)
 
-Веб-сервис «Wi-Fi Routers» — REST API каталога Wi-Fi оборудования. В лабораторной работе №4 бэкенд дополняется:
+Веб-сервис «Wi-Fi Routers» — каталог Wi-Fi оборудования. В лабораторной работе №4 к бэкенду добавляются:
 
-- **Регистрацией и аутентификацией через куки (сессии в Redis)**,
-- **Моделями доступа**: без авторизации — только чтение (GET), с авторизацией — методы создателя,
-- **Автозаполнением создателя** в таблице `routers` из текущей сессии (вместо константы),
-- **Swagger-документацией** с cookie-авторизацией (Authorize),
-- **Postman-коллекцией** с заголовком `Cookie` и проверками 401/403.
+- **Регистрация и аутентификация через куки (сессии)**,
+- **Модель доступа**: гость — только чтение, создатель — свои услуги (401 / 403),
+- **Автоматическое привязывание пользователя к его услугам** (поле `creator` из сессии вместо константы),
+- **Хранение активных сессий в Redis**,
+- **HTML-страницы на Jinja2** с пользователем из сессии,
+- **Swagger-документация для тестирования JSON API**.
 
 ---
 
@@ -17,14 +18,14 @@
 - [Куки и сессии: теория и принцип работы](#куки-и-сессии-теория-и-принцип-работы)
 - [Зачем нужен Redis при использовании сессий?](#зачем-нужен-redis-при-использовании-сессий)
 - [Подготовка окружения](#подготовка-окружения)
-- [Что изменилось в проекте](#что-изменилось-в-проекте)
-- [Session store: работа с Redis](#session-store-работа-с-redis)
-- [Зависимости (guard'ы): текущий пользователь и права](#зависимости-guardы-текущий-пользователь-и-права)
-- [Домен пользователя: register / login / logout](#домен-пользователя-register--login--logout)
-- [Домен услуги: guard'ы, автозаполнение creator, статусы](#домен-услуги-guardы-автозаполнение-creator-статусы)
-- [Swagger: описание методов и Authorize](#swagger-описание-методов-и-authorize)
+- [Структура проекта FastAPI](#структура-проекта-fastapi)
+- [Настройка FastAPI и Swagger](#настройка-fastapi-и-swagger)
+- [Реализация моделей Users и Router](#реализация-моделей-users-и-router)
+- [Аутентификация: сессии, зависимости, контроллер](#аутентификация-сессии-зависимости-контроллер)
+- [Контроллеры с авторизацией](#контроллеры-с-авторизацией)
+- [Настройка Jinja2](#настройка-jinja2)
 - [Тестирование](#тестирование)
-- [Порядок показа и скриншоты](#порядок-показа-и-скриншоты)
+- [Порядок показа](#порядок-показа)
 - [Контрольные вопросы](#контрольные-вопросы)
 - [Заключение](#заключение)
 
@@ -33,37 +34,36 @@
 ## Чем отличается аутентификация от авторизации?
 
 - **Аутентификация** — подтверждение личности: *«Кто ты?»*
-  Пример: ввод username и пароля → сервер проверяет их в таблице `users` и выдаёт сессию.
+  Пример: ввод логина и пароля → сервер проверяет их в таблице `users` и выдаёт сессию.
 
 - **Авторизация** — проверка прав: *«Что ты можешь?»*
-  Пример: без куки — только GET-чтение (401 для остального); с кукой — методы создателя, но со своей услугой, а не с чужой (403).
+  Пример: гость может только читать список и ленту; создатель может публиковать и удалять **только свои** услуги — чужая даёт 403.
+
+В коде это две разные зависимости: `require_user` (аутентификация, 401) и `ensure_owner` (авторизация, 403).
 
 ---
 
 ## Куки и сессии: теория и принцип работы
 
-В отличие от JWT, **сессионная аутентификация — stateful**: сервер хранит информацию о сессии (в Redis).
+В отличие от JWT, **сессионная аутентификация — stateful**: сервер хранит информацию о сессии (у нас — в Redis).
 
-**Как это работает в нашем сервисе**:
+**Как это работает**:
 
-1. `POST /api/register` — создаётся запись в `users` (логин уникален, иначе 409).
-2. `POST /api/login` — сервер проверяет username/пароль. Если данные верны, создаёт запись в Redis:
+1. При `POST /api/login` сервер проверяет логин и пароль.
+2. Если данные верны — создаёт запись в Redis:
    ```text
-   session:6099e7c01da54dcebd367d64455dfe2c → {"id_user": 13, "username": "stuba33a4a5"}
+   session:6099e7c01da54dcebd367d64455dfe2c → {"id_user": 13, "username": "user_0"}
    ```
-3. Устанавливается HttpOnly-кука:
+3. Устанавливает куку:
    ```http
    Set-Cookie: sessionId=6099e7c01da54dcebd367d64455dfe2c; HttpOnly; Max-Age=3600; Path=/; SameSite=lax
    ```
-4. Браузер (и Swagger в той же вкладке) автоматически отправляет куку при каждом запросе.
-5. В Postman/Insomnia куку передаём вручную заголовком:
-   ```http
-   Cookie: sessionId=6099e7c01da54dcebd367d64455dfe2c
-   ```
-6. Сервер читает `sessionId`, ищет сессию в Redis → если найдена, достаёт пользователя из БД и пускает в «методы создателя».
-7. `POST /api/logout` — сессия удаляется из Redis → **мгновенная деавторизация** (та же кука сразу даёт 401).
+4. Браузер автоматически отправляет эту куку при каждом запросе (в Postman/Insomnia — заголовок `Cookie: sessionId=...`).
+5. Сервер читает `sessionId`, ищет сессию в Redis → если найдена, пользователь авторизован.
 
-> Кука с флагом `HttpOnly` недоступна из JavaScript → защита от XSS.
+> 🔑 Кука с флагом `HttpOnly` недоступна из JavaScript → защита от XSS.
+
+> 💡 При logout сессия удаляется из Redis → мгновенная деавторизация.
 
 ---
 
@@ -71,15 +71,27 @@
 
 Сессии должны храниться внешне (не в памяти процесса), чтобы:
 
-- работать в кластере (несколько экземплялов приложения),
+- работать в кластере (несколько экземпляров uvicorn),
 - сохранять сессии после перезапуска сервера,
-- быстро проверять и удалять сессии (TTL = 1 час), а также смотреть их из `redis-cli` во время отладки.
+- быстро проверять и удалять сессии (TTL = 1 час).
 
-Redis — идеальное решение: быстрое, простое, надёжное.
+Redis — идеальное решение: быстрое, простое, надёжное. Ещё один плюс — содержимое сессий видно через `redis-cli`.
 
 ---
 
 ## Подготовка окружения
+
+Убедитесь, что установлены:
+
+- **Python 3.13**
+  ```bash
+  python --version  # ≥ 3.13
+  ```
+
+- **Docker** (для PostgreSQL, MinIO и Redis)
+  ```bash
+  docker --version
+  ```
 
 В `docker-compose.yml` к PostgreSQL, MinIO и Adminer добавлен Redis:
 
@@ -91,20 +103,30 @@ Redis — идеальное решение: быстрое, простое, н�
       - "6379:6379"
 ```
 
-Запуск всего стека и приложения:
+Запуск:
 
 ```bash
-docker compose up -d          # postgres, minio, adminer, redis
+docker compose up -d
+python -m venv venv
+venv\Scripts\activate
 pip install -r requirements.txt
 alembic upgrade head
 uvicorn main:app --reload
 ```
 
-Swagger: <http://127.0.0.1:8000/docs>
-
-Настройки в `.env`:
+Настройки в `.env` (читаются в `core/config.py` через `pydantic-settings`):
 
 ```dotenv
+DB_HOST=localhost
+DB_PORT=5433
+DB_USER=...
+DB_PASSWORD=...
+DB_NAME=routers_db
+
+MINIO_ENDPOINT=localhost
+MINIO_PORT=9000
+MINIO_BUCKET=wifi-routers
+
 REDIS_HOST=localhost
 REDIS_PORT=6379
 REDIS_DB=0
@@ -113,24 +135,136 @@ SESSION_TTL=3600
 
 ---
 
-## Что изменилось в проекте
+## Структура проекта FastAPI
 
-| Файл | Изменение |
-|---|---|
-| `core/session.py` | **новый** — session store в Redis (create / get / destroy) |
-| `api/deps.py` | **переписан** — константа `USER_ID=1` заменена на куку sessionId → Redis → пользователь из БД; `get_optional_user`, `require_user`, `ensure_owner` |
-| `api/user.py` | register/login/logout вместо заглушек, установка HttpOnly-куки |
-| `api/routers.py` | guard'ы на методах создателя, `creator` из сессии, статусы 401/403/404/409, Swagger-описания |
-| `api/schemas.py` | **новый** — Pydantic-модели ответов для Swagger |
-| `main.py` | описание API, версия, `persistAuthorization` в Swagger UI |
-| `docker-compose.yml`, `.env`, `core/config.py`, `requirements.txt` | Redis + `redis==8.1.0` |
-| `postman/wifi-equipment.postman_collection.json` | коллекция лабы 4: auth + заголовок Cookie + гостевые 401 |
+Для сессий понадобилась одна новая зависимость — `redis==8.1.0` (асинхронный клиент `redis.asyncio`).
+
+```text
+wifi-equipment/
+├── main.py               # приложение FastAPI, Swagger, подключение роутеров
+├── core/
+│   ├── config.py         # настройки из .env
+│   └── session.py        # хранилище сессий в Redis          (новое)
+├── db/                   # движок SQLAlchemy (async), Base
+├── models/               # Users, Router, Likes
+├── api/
+│   ├── deps.py           # зависимости: текущий пользователь, права (переписано)
+│   ├── user.py           # домен пользователя: register / login / logout
+│   ├── routers.py        # домен услуги: JSON API
+│   ├── schemas.py        # Pydantic-модели ответов для Swagger   (новое)
+│   ├── serializers.py    # модель → dict
+│   └── handlers.py       # HTML-страницы на Jinja2
+├── templates/            # tape, tile, add (.html)
+├── minio_client.py       # загрузка картинок и видео в MinIO
+└── alembic/              # миграции БД
+```
 
 ---
 
-## Session store: работа с Redis
+## Настройка FastAPI и Swagger
 
-`core/session.py`:
+В `main.py` подключаются роутеры и описание API для Swagger. Swagger доступен по адресу <http://127.0.0.1:8000/docs>.
+
+```python
+DESCRIPTION = """
+REST API каталога Wi-Fi оборудования с **сессионной аутентификацией через куку**.
+
+### Правила доступа
+* **Без авторизации** — только чтение: `GET /api/routers`, `GET /api/router`.
+  Работает независимо от токена/куки.
+* **С авторизацией** — методы создателя: создание черновика, публикация, удаление,
+  лайк, получение черновика. Без куки — **401**, для чужой услуги — **403**.
+...
+"""
+
+app = FastAPI(
+    title="Wi-Fi Routers API",
+    description=DESCRIPTION,
+    version="4.0.0",
+    lifespan=lifespan,
+    swagger_ui_parameters={"persistAuthorization": True},
+)
+
+app.mount("/static", StaticFiles(directory="static"), name="static")
+app.include_router(router)           # HTML-страницы (в Swagger не показываются)
+app.include_router(routers_router)   # /api/routers, /api/router...
+app.include_router(user_router)      # /api/register, /api/login, /api/logout
+```
+
+Кнопка **Authorize** появляется автоматически: зависимость `require_user` объявлена через `APIKeyCookie` (см. ниже), и FastAPI добавляет в OpenAPI схему безопасности с кукой `sessionId`. У методов создателя в Swagger появляется замок.
+
+---
+
+## Реализация моделей Users и Router
+
+Модели SQLAlchemy уже были созданы в лабораторных 2–3. Для лабораторной 4 важно, что у услуги есть поле `creator` — теперь оно заполняется из сессии.
+
+`models/users.py`:
+```python
+class Users(Base):
+    __tablename__ = "users"
+
+    id_user = Column(Integer, primary_key=True)
+    username = Column(String(50), nullable=False, unique=True)
+    password = Column(String(255), nullable=False)
+```
+
+`models/routers.py`:
+```python
+class Router(Base):
+    __tablename__ = "routers"
+
+    id_routers = Column(Integer, primary_key=True)
+    title = Column(String(100), nullable=False)
+    standard = Column(String(50), nullable=True)
+    max_speed = Column(Integer, nullable=True)
+    band = Column(String(20), nullable=True)
+    antennas = Column(String(30), nullable=True)
+    frequency = Column(Float, nullable=True)
+    image_url = Column(String(255), nullable=True)
+    video_url = Column(String(255), nullable=True)
+    description = Column(Text, nullable=True)
+    date_created = Column(TIMESTAMP, nullable=False, server_default=func.now())
+    creator = Column(String(50), nullable=False)        # ← username из сессии
+    date_formed = Column(TIMESTAMP, nullable=True)
+    date_completed = Column(TIMESTAMP, nullable=True)
+    status = Column(String(20), nullable=False, server_default="черновик")
+```
+
+`models/likes.py`:
+```python
+class Likes(Base):
+    __tablename__ = "likes"
+
+    id_user = Column(Integer, ForeignKey("users.id_user"), nullable=False, primary_key=True)
+    id_routers = Column(Integer, ForeignKey("routers.id_routers"), nullable=False, primary_key=True)
+```
+
+Pydantic-модели ответов для Swagger — `api/schemas.py`:
+```python
+class UserSchema(BaseModel):
+    id_user: int = Field(description="Идентификатор пользователя")
+    username: str = Field(description="Логин")
+
+
+class AuthResponseSchema(BaseModel):
+    user: UserSchema = Field(description="Аутентифицированный пользователь")
+
+
+class RouterSchema(BaseModel):
+    id_routers: int = Field(description="Идентификатор услуги")
+    title: str = Field(description="Название")
+    ...
+    creator: str = Field(description="Логин создателя (заполняется из сессии)")
+```
+
+---
+
+## Аутентификация: сессии, зависимости, контроллер
+
+В этой реализации используется сессионная аутентификация через куки. Сервер хранит активные сессии в Redis, а клиент получает куку `sessionId`.
+
+### Хранилище сессий — `core/session.py`
 
 ```python
 import json
@@ -166,139 +300,181 @@ async def destroy_session(session_id: str) -> None:
     await redis_client.delete(f"session:{session_id}")
 ```
 
-Ключ — `session:<hex-uuid>`, значение — JSON с пользователем (в `redis-cli` сразу видно, кому принадлежит сессия), TTL — 1 час.
+Ключ — `session:<uuid>`, значение — JSON с пользователем, TTL — `SESSION_TTL` (1 час).
 
----
+### Зависимости вместо guard — `api/deps.py`
 
-## Зависимости (guard'ы): текущий пользователь и права
-
-`api/deps.py` — вместо синглтона-константы `get_current_user()` два варианта зависимости:
+В FastAPI роль guard'а из NestJS выполняют зависимости (`Depends`). Константа-синглтон из лабораторной 3 (`USER_ID = 1`) заменена на пользователя из сессии:
 
 ```python
 COOKIE_NAME = "sessionId"
 
 cookie_scheme = APIKeyCookie(
     name=COOKIE_NAME,
-    description="Сессионная кука (HttpOnly), выдаваемая в Set-Cookie при POST /api/login ...",
+    description="Сессионная кука (HttpOnly), выдаваемая в Set-Cookie при POST /api/login. ...",
     auto_error=False,
 )
 
 
 async def get_optional_user(request: Request, db: AsyncSession = Depends(get_db)) -> Users | None:
-    """Для открытых GET: без куки возвращает None (is_creator/is_liked = 0)."""
+    """Для открытых GET: без куки — гость (None), признаки is_creator/is_liked = 0."""
     session_id = request.cookies.get(COOKIE_NAME)
     if not session_id:
         return None
     session = await get_session(session_id)
     if session is None:
         return None
-    result = await db.execute(select(Users).where(Users.id_user == session["id_user"]))
-    return result.scalar_one_or_none()
+    return await _load_user(db, session["id_user"])
 
 
-async def require_user(session_id: str | None = Depends(cookie_scheme), db: AsyncSession = Depends(get_db)) -> Users:
-    """Для методов создателя: нет/истекла кука → 401."""
+async def require_user(
+    session_id: str | None = Depends(cookie_scheme),
+    db: AsyncSession = Depends(get_db),
+) -> Users:
+    """Для методов создателя: нет куки или сессия истекла — 401."""
     if not session_id:
         raise HTTPException(status_code=401, detail="Требуется аутентификация: нет куки sessionId")
     session = await get_session(session_id)
     if session is None:
         raise HTTPException(status_code=401, detail="Сессия недействительна или истекла")
-    ...
+    user = await _load_user(db, session["id_user"])
+    if user is None:
+        raise HTTPException(status_code=401, detail="Пользователь сессии не найден")
     return user
 
 
 def ensure_owner(user: Users, router_creator: str) -> None:
-    """Авторизация: операции с услугой — только её создателю, иначе 403."""
+    """Авторизация: операции с услугой — только её создателю."""
     if user.username != router_creator:
         raise HTTPException(status_code=403, detail="Недостаточно прав: услуга принадлежит другому пользователю")
 ```
 
-`APIKeyCookie` из `fastapi.security` делает две вещи: помогает читать куку и добавляет в OpenAPI security-схему — в Swagger появляется кнопка **Authorize** у методов под замком.
+> 💡 `require_user` проверяет куку `sessionId`, ищет сессию в Redis и возвращает пользователя из БД — так же, как `SessionGuard` в NestJS кладёт `userId` в `req.session`.
 
----
+### Контроллер пользователя — `api/user.py`
 
-## Домен пользователя: register / login / logout
-
-`api/user.py` (форма — как в ТЗ, form-data):
+Регистрация и вход принимают `form-data` (`username`, `password`):
 
 ```python
-@router.post("/register", response_model=UserSchema, summary="Регистрация пользователя")
-async def register(username: str = Form(...), password: str = Form(...), db=Depends(get_db)):
+router = APIRouter(prefix="/api", tags=["Пользователь"])
+
+
+@router.post("/register", response_model=UserSchema, summary="Регистрация пользователя",
+             responses={409: {"description": "Логин уже занят"}})
+async def register(
+    username: str = Form(..., description="Логин (уникальный)"),
+    password: str = Form(..., description="Пароль"),
+    db: AsyncSession = Depends(get_db),
+):
     existing = await db.execute(select(Users).where(Users.username == username))
     if existing.scalar_one_or_none() is not None:
         raise HTTPException(status_code=409, detail="Пользователь с таким логином уже существует")
+
     user = Users(username=username, password=password)
-    db.add(user); await db.commit(); await db.refresh(user)
+    db.add(user)
+    await db.commit()
+    await db.refresh(user)
     return {"id_user": user.id_user, "username": user.username}
 
 
 @router.post("/login", response_model=AuthResponseSchema, summary="Аутентификация (выдача сессии)")
-async def login(response: Response, username: str = Form(...), password: str = Form(...), db=Depends(get_db)):
-    user = (await db.execute(select(Users).where(Users.username == username))).scalar_one_or_none()
+async def login(
+    response: Response,
+    username: str = Form(...),
+    password: str = Form(...),
+    db: AsyncSession = Depends(get_db),
+):
+    result = await db.execute(select(Users).where(Users.username == username))
+    user = result.scalar_one_or_none()
     if user is None or user.password != password:
         raise HTTPException(status_code=401, detail="Неверный логин или пароль")
 
     session_id = await create_session(user.id_user, user.username)
-    response.set_cookie(COOKIE_NAME, session_id, max_age=settings.SESSION_TTL,
-                        httponly=True, samesite="lax", path="/")
+    response.set_cookie(
+        key=COOKIE_NAME,
+        value=session_id,
+        max_age=settings.SESSION_TTL,
+        httponly=True,
+        samesite="lax",
+        path="/",
+    )
     return {"user": {"id_user": user.id_user, "username": user.username}}
 
 
 @router.post("/logout", summary="Деавторизация (уничтожение сессии)")
-async def logout(response: Response, user=Depends(require_user), session_id=Depends(cookie_scheme)):
+async def logout(
+    response: Response,
+    user: Users = Depends(require_user),
+    session_id: str | None = Depends(cookie_scheme),
+):
     await destroy_session(session_id)
-    response.delete_cookie(COOKIE_NAME, path="/")
+    response.delete_cookie(key=COOKIE_NAME, path="/")
     return {"ok": True}
 ```
 
-Правила доступа: `register`/`login` открыты (это и есть аутентификация), `logout` — метод с авторизацией (без куки → 401), как и остальные не-GET.
-
 ---
 
-## Домен услуги: guard'ы, автозаполнение creator, статусы
+## Контроллеры с авторизацией
 
-`api/routers.py`:
+`api/routers.py` — домен услуги. Открытые методы получают `Depends(get_optional_user)`, методы создателя — `Depends(require_user)`:
 
-| Метод | URL | Доступ | Коды ответа |
-|---|---|---|---|
-| GET | `/api/routers?freq_min=&freq_max=` | открытый | 200 (`is_creator` 0/1) |
-| GET | `/api/router` | открытый | 200 (`like_count`, `is_liked` 0/1) |
-| GET | `/api/router/{id}?next=true` | открытый | 200 / 404 |
-| GET | `/api/router/draft` | создатель | 200 / **401** |
-| POST | `/api/router` | создатель | 200 / **401** / 409 (уже есть черновик) |
-| PUT | `/api/router/{id}` | создатель | 200 / **401** / **403** (чужая) / 404 / 409 (не черновик) |
-| DELETE | `/api/router/{id}` | создатель | 200 / **401** / **403** / 404 |
-| POST | `/api/router/{id}` (like) | создатель | 200 / **401** / 404 (нет или не опубликована) / 422 (like не 0/1) |
+Всего **10 методов**: 7 в домене «Услуги» и 3 в домене «Пользователь».
 
-Автозаполнение пользователя при создании услуги и публикация:
+| № | Метод | URL | Назначение | Доступ | Коды ответа |
+|---|---|---|---|---|---|
+| 1 | GET | `/api/routers?freq_min=&freq_max=` | список опубликованных с фильтром, `is_creator` 0/1 | гость и создатель | 200 |
+| 2 | GET | `/api/router?id_routers=&next=` | лента опубликованных: без `id_routers` — первая, с `id_routers` — указанная, `next=true` — следующая по кругу; `like_count`, `is_liked` 0/1 | гость и создатель | 200 / 404 |
+| 3 | GET | `/api/router/draft` | черновик текущего пользователя (не более одного), ид не передаётся | создатель | 200 (черновик или `null`) / 401 |
+| 4 | POST | `/api/router` | добавление: `title`, файлы `image` и `video` → MinIO, в БД — латинские имена `uuid.ext` | создатель | 200 / 401 / 409 (уже есть черновик) |
+| 5 | PUT | `/api/router/{id_routers}` | публикация (черновик → опубликован) | создатель | 200 / 401 / 403 (чужая) / 404 / 409 (не черновик) |
+| 6 | DELETE | `/api/router/{id_routers}` | soft delete, только свои | создатель | 200 / 401 / 403 / 404 |
+| 7 | POST | `/api/router/{id_routers}` | лайк: `like=1` — поставить, `like=0` — отменить | создатель | 200 / 401 / 404 (нет или не опубликована) / 422 (`like` не 0/1) |
+| 8 | POST | `/api/register` | регистрация | гость | 200 / 409 |
+| 9 | POST | `/api/login` | аутентификация | гость | 200 + `Set-Cookie` / 401 |
+| 10 | POST | `/api/logout` | деавторизация | создатель | 200 / 401 |
+
+Создание услуги — автор берётся из сессии:
 
 ```python
-@router.post("/router", response_model=RouterSchema, summary="Создать черновик услуги (с картинкой и видео)")
+@router.post("/router", response_model=RouterSchema, summary="Создать черновик услуги (с картинкой и видео)",
+             responses={**OWNER_ONLY, 409: {"description": "У пользователя уже есть черновик"}})
 async def create_router(
-    title: str = Form(...),
-    image: UploadFile = File(...),
-    video: UploadFile = File(...),
-    user: Users = Depends(require_user),      # ← вместо константы USER_ID=1
+    title: str = Form(..., description="Название услуги"),
+    image: UploadFile = File(..., description="Изображение (jpg/png)"),
+    video: UploadFile = File(..., description="Видео (mp4)"),
+    user: Users = Depends(require_user),          # ← вместо константы USER_ID = 1
     db: AsyncSession = Depends(get_db),
 ):
     ...
+    image_url = upload_file(await image.read(), image.filename)
+    video_url = upload_file(await video.read(), video.filename)
+
     item = Router(
         title=title,
         image_url=image_url,
         video_url=video_url,
         status=DRAFT,
         date_created=datetime.now(),
-        creator=user.username,                # ← автор берётся из сессии
+        creator=user.username,                    # ← автор из сессии
     )
+```
 
+Публикация — проверка прав:
 
-@router.put("/router/{id_routers}", response_model=RouterSchema, summary="Опубликовать услугу")
-async def publish_router(id_routers: int, description=Form(...), frequency=Form(...), ...,
-                            user: Users = Depends(require_user), db=Depends(get_db)):
-    item = ...
+```python
+@router.put("/router/{id_routers}", response_model=RouterSchema, summary="Опубликовать услугу (черновик → опубликован)")
+async def publish_router(
+    id_routers: int,
+    description: str = Form(...),
+    frequency: float = Form(...),
+    ...,
+    user: Users = Depends(require_user),
+    db: AsyncSession = Depends(get_db),
+):
+    item = (await db.execute(select(Router).where(Router.id_routers == id_routers))).scalar_one_or_none()
     if item is None:
         raise HTTPException(status_code=404, detail="Услуга не найдена")
-    ensure_owner(user, item.creator)     # ← чужая услуга → 403
+    ensure_owner(user, item.creator)              # ← чужая услуга → 403
     if item.status != DRAFT:
         raise HTTPException(status_code=409, detail="Публикация возможна только из статуса «черновик»")
     ...
@@ -306,64 +482,118 @@ async def publish_router(id_routers: int, description=Form(...), frequency=Form(
     item.date_formed = datetime.now()
 ```
 
-В открытых GET-методах признаки считаются для текущего пользователя (или для гостя):
+В открытых методах признаки считаются для текущего пользователя, у гостя они всегда 0:
 
 ```python
 "is_creator": 1 if (user is not None and e.creator == user.username) else 0
-"is_liked": 1 if is_liked else 0   # для гостя всегда 0
+"is_liked": 1 if is_liked else 0
 ```
 
 ---
 
-## Swagger: описание методов и Authorize
+## Настройка Jinja2
 
-`main.py`:
+HTML-страницы из лабораторных 1–2 (`/feed`, `/grid`, `/add`) остаются для демонстрации и в Swagger не попадают (`APIRouter(include_in_schema=False)`). Отдельной HTML-страницы входа нет, поэтому пользователь на них определяется так: если в браузере есть кука `sessionId` (вход через `POST /api/login` в Swagger), это пользователь сессии, иначе — пользователь по умолчанию `user_0`. JSON API (`/api/...`) работает строго по сессии.
+
+`api/handlers.py`:
 
 ```python
-app = FastAPI(
-    title="Wi-Fi Router API",
-    description=DESCRIPTION,          # правила доступа + как получить куку
-    version="4.0.0",
-    lifespan=lifespan,
-    swagger_ui_parameters={"persistAuthorization": True},
-)
+DEFAULT_HTML_USER = "user_0"
+
+
+async def get_html_user(
+    user: Users | None = Depends(get_optional_user),
+    db: AsyncSession = Depends(get_db),
+) -> Users:
+    if user is not None:
+        return user
+    result = await db.execute(select(Users).where(Users.username == DEFAULT_HTML_USER))
+    return result.scalar_one()
+
+
+@router.post("/add")
+async def add_draft(
+    title: str = Form(...),
+    image: UploadFile = File(...),
+    video: UploadFile = File(...),
+    user: Users = Depends(get_html_user),
+    db: AsyncSession = Depends(get_db),
+):
+    existing_draft = await get_draft(user.username, db)
+    if existing_draft is None:
+        new_router = Router(
+            title=title,
+            image_url=upload_file(await image.read(), image.filename),   # файл → MinIO
+            video_url=upload_file(await video.read(), video.filename),
+            creator=user.username,
+            status="черновик",
+            date_created=datetime.now(),
+        )
+        ...
 ```
 
-У каждого эндпоинта — `summary`, `description`, `responses` (401/403/404/409), у полей — `description`; модели ответов (`api/schemas.py`) описывают поля в Swagger. Методы под `Depends(require_user)` автоматически получают security-схему `sessionId` — у них в Swagger значок замка и кнопка **Authorize**.
+Форма добавления отправляет файлы, поэтому у неё `enctype="multipart/form-data"`, а у полей файлов — `name`:
 
-Как тестировать в Swagger:
+```html
+<form class="add-form" method="post" action="/add" enctype="multipart/form-data">
+    <input type="file" name="image" accept="image/*" required>
+    <input type="file" name="video" accept="video/*" required>
+    <input type="text" name="title" required>
+    ...
+</form>
+```
 
-1. Откройте <http://127.0.0.1:8000/docs> **в режиме инкогнито** (чистые куки).
-2. `POST /api/register` → 200 с `{id_user, username}`.
-3. `POST /api/login` → в ответе `Set-Cookie: sessionId=...; HttpOnly` — браузер запомнит куку, и все дальнейшие запросы из этой вкладки уже авторизованы.
-4. Анонимные GET (`/api/routers`, `/api/router`) работают и без куки.
-5. Методы под замком без куки вернут 401; с кукой — 200.
-6. Альтернатива: нажмите **Authorize** и вставьте значение `sessionId` из вкладки Application → Cookies (Postman/Insomnia: заголовок `Cookie: sessionId=значение`).
+В БД хранится только имя файла, поэтому в шаблонах адрес строится фильтром `media` (это функция `file_url` из `minio_client.py`):
+
+```html
+{% set img_src = (router.image_url | media) if router.image_url else '/static/img/default.svg' %}
+```
+
+Удаление на странице плитки (`POST /routers/{id}/delete`, SQL `UPDATE` из лабораторной 2) теперь удаляет только свои услуги (`WHERE id_routers = :id AND creator = :creator`). Кнопка «Удалить» показывается только на своих карточках.
 
 ---
 
 ## Тестирование
 
-### 1. Swagger (инкогнито)
+### 1. Swagger
 
-- Регистрация → 200, логин → 200 + `Set-Cookie` (скриншоты 1–3).
-- GET списка услуг в Swagger после логина (кука браузера подставляется сама).
+Откройте <http://127.0.0.1:8000/docs> **в режиме инкогнито**, чтобы начать без старых кук.
+
+- **Регистрация** — `POST /api/register`, form-data: `username`, `password`. Ответ 200:
+  ```json
+  { "id_user": 31, "username": "student" }
+  ```
+  Если логин занят — 409.
+- **Логин** — `POST /api/login`, те же поля. Ответ 200:
+  ```json
+  { "user": { "id_user": 31, "username": "student" } }
+  ```
+  В заголовках ответа — `Set-Cookie: sessionId=...; HttpOnly`. Браузер сохранит куку, и запросы из этой вкладки уже авторизованы. Значение куки видно в DevTools → **Application → Cookies → http://127.0.0.1:8000**.
+- **Список услуг** — `GET /api/routers` → 200.
+- Вместо куки браузера можно нажать **Authorize** и вставить значение `sessionId`.
 
 ### 2. Postman / Insomnia
 
-Коллекция `postman/wifi-equipment.postman_collection.json` (проверена в newman: 15 запросов, 43/43 проверки):
+Скопируйте значение `sessionId` из вкладки **Application** и передавайте его в запросах создателя заголовком:
 
-- `{{base_url}}` = `http://127.0.0.1:8000` — авторизованные запросы с заголовком `Cookie: sessionId={{session_id}}`;
-- `{{anon_url}}` = `http://localhost:8000` — анонимные/гостевые запросы (куки-джар Postman на них не распространяется, поэтому 401 честный);
-- после `POST /api/login` значение куки из `Set-Cookie` сохраняется в `{{session_id}}`; `id` созданной услуги — в `{{router_id}}`.
+```http
+Cookie: sessionId=6099e7c01da54dcebd367d64455dfe2c
+```
 
-Прогон по порядку: регистрация → логин → список (без куки, 200) → черновик/создание без куки (401) → создание с кукой (200, `creator` = username) → поля черновика → публикация без куки (401) → публикация с кукой (200, статус «опубликован») → лента без ид и по ид `?next=true` (без куки) → лайк → удаление → logout → повторный запрос с той же кукой (401).
+(В Postman это можно сделать и через вкладку **Cookies** под кнопкой Send.)
 
-Чужая услуга: второй пользователь пытается опубликовать/удалить чужой черновик → 403 (в смоук-тесте проекта).
+- `GET /api/routers?freq_min=2.4&freq_max=6` **без куки** → 200, работает независимо от куки.
+- `GET /api/router` и `GET /api/router?id_routers=1&next=true` без куки → 200.
+- `PUT /api/router/{id}` **без куки** → 401:
+  ```json
+  { "detail": "Требуется аутентификация: нет куки sessionId" }
+  ```
+- `PUT /api/router/{id}` с кукой, **чужая** услуга → 403.
+- `PUT /api/router/{id}` с кукой, свой черновик, form-data `description`, `frequency`, `standard`, `max_speed`, `antennas` → 200, поля обновлены, `status: "опубликован"`, заполнена `date_formed`.
+- `POST /api/router` с кукой → в ответе `creator` = ваш логин (автор подставился из сессии).
+- `POST /api/logout` → `{ "ok": true }`. Повторный запрос с той же кукой → 401: сессия удалена.
 
 ### 3. Redis через cmd
-
-После логина в Swagger/Postman посмотрите содержимое Redis:
 
 ```bat
 docker exec redis_session redis-cli KEYS "session:*"
@@ -373,68 +603,67 @@ docker exec redis_session redis-cli TTL "session:6099e7c01da54dcebd367d64455dfe2
 
 ```text
 1) "session:6099e7c01da54dcebd367d64455dfe2c"
-{"id_user": 13, "username": "stuba33a4a5"}
+{"id_user": 31, "username": "student"}
 (integer) 3016
 ```
 
-В ключе сессии виден пользователь. После `POST /api/logout` ключ исчезает (`GET` → `(nil)`) — деавторизация мгновенная.
+В значении сессии виден пользователь. После logout `GET` возвращает `(nil)`.
+
+### 4. Jinja2 через браузер
+
+Откройте <http://127.0.0.1:8000/add>: выберите фото и видео, введите название и нажмите «Далее» — файлы загрузятся в MinIO, появится черновик с превью. Заполните частоту и описание и нажмите «Опубликовать» — откроется лента с новой услугой. Без входа черновик создаётся от `user_0`; после `POST /api/login` в Swagger в той же вкладке — от вашего пользователя.
 
 ---
 
-## Порядок показа и скриншоты
+## Порядок показа
 
-| № | Что снимать |
+| № | Что показать |
 |---|---|
-| 1 | Swagger (инкогнито): `POST /api/register` → 200 |
-| 2 | Swagger: `POST /api/login` → 200, в ответе `Set-Cookie: sessionId=...; HttpOnly` |
-| 3 | Swagger: список услуг после логина (GET `/api/routers` → 200) |
-| 4 | Postman: GET списка без токена/куки → 200 (работает независимо) |
-| 5 | Postman: GET ленты без токена/куки → 200 |
-| 6 | Postman/Insomnia: PUT публикации **без куки** → 401 (для чужой услуги — 403) |
-| 7 | Postman: PUT публикации **с кукой** (`Cookie: sessionId=...`) → 200, поля обновлены, статус «опубликован» |
-| 8 | cmd: `redis-cli KEYS "session:*"` и `GET session:<id>` — в ключе сессии пользователь; после logout ключ удалён |
-| 9 | StarUML: sequence-диаграмма, у сообщений в properties заполнено поле `signature` (переиспользовано из диаграммы классов) |
+| 1–3 | Swagger в режиме инкогнито: `POST /api/login` → 200 и `Set-Cookie`; кука во вкладке Application; `GET /api/routers` → 200 |
+| 4–5 | Postman/Insomnia: `GET /api/routers` и `GET /api/router` без куки → 200 |
+| 6–8 | `PUT /api/router/{id}`: без куки → 401, чужая услуга → 403, с кукой → 200 и обновлённые поля; содержимое Redis через cmd (`KEYS`, `GET` — в сессии виден пользователь) |
+| 9 | StarUML: у сообщений диаграммы последовательности свойство `signature` выбрано из методов доменов диаграммы классов |
 
-Sequence-диаграмма (StarUML) — весь набор HTTP-запросов бизнес-процесса без БД и нативного приложения: аутентификация → GET списка с фильтром → добавление услуги с картинкой и видео → поля черновика → публикация → лента без ид → лента по ид `?next=true` → лайк. В качестве Lifeline — домены, в `arguments` сообщений — ключевые входные/выходные данные (username/password; sessionId; title/image/video; id_routers и т.д.).
+Диаграмма последовательности: Lifeline — «Фронтенд (пользователь)», «Домен Пользователь», «Домен Роутер». Сообщения: аутентификация → список с фильтром → добавление с картинкой и видео → черновик → публикация → лента без ид → лента по ид `?next=true` → лайк. В `arguments` — ключевые входные и выходные данные (`username, password`; `sessionId`; `title, image, video`; `id_routers` и т. д.).
 
 ---
 
 ## Контрольные вопросы
 
-**Куки** — небольшие пары «имя=значение», которые сервер отправляет в заголовке `Set-Cookie`, а клиент возвращает в каждом запросе в заголовке `Cookie`. Флаг `HttpOnly` запрещает доступ к куке из JS (защита от XSS), `SameSite=Lax` снижает риск CSRF, `Max-Age` задаёт время жизни. У нас HttpOnly-кука `sessionId` — идентификатор сессии.
+**Куки** — пары «имя=значение», которые сервер присылает в заголовке `Set-Cookie`, а браузер возвращает в заголовке `Cookie`. `HttpOnly` запрещает доступ из JavaScript, `SameSite=Lax` снижает риск CSRF, `Max-Age` задаёт время жизни.
 
-**Сессия** — состояние «пользователь залогинен» на стороне сервера. Идентификатор сессии живёт в куке, а сами данные сессии (id пользователя) — в Redis. Stateful-подход в отличие от stateless JWT: logout и истечение TTL работают мгновенно.
+**Сессия** — состояние «пользователь вошёл», которое хранит сервер. В куке лежит только идентификатор сессии, данные — в Redis. Выход и истечение TTL срабатывают сразу.
 
-**Redis** — быстрый key-value store «в памяти» с TTL. Для сессий он хранит пары `session:<id> → userId/JSON`, переживает перезапуски приложения, позволяет смотреть активные сессии из `redis-cli` и одинаково хорошо работает за несколькими инстансами сервиса.
+**Redis** — быстрое хранилище «ключ-значение» в памяти с TTL. Хранит `session:<id> → пользователь`, переживает перезапуск приложения и общий для нескольких экземпляров сервиса.
 
-**JWT** — самодостаточный подписанный токен (header.payload.signature, подписанный секретом или RSA-ключом). Не требует серверного хранения, поэтому для него делают «чёрный список» отозванных токенов (в т.ч. в Redis). В этой лабораторной для FastAPI выбран сессионный подход с кукой; JWT+blacklist — вариант для Golang-части.
+**JWT** — подписанный токен `header.payload.signature`, передаётся в заголовке `Authorization: Bearer`. Сервер не хранит его, поэтому для выхода нужен чёрный список отозванных токенов (blacklist, обычно в Redis). По заданию JWT используется в варианте на Golang, а для FastAPI — сессии и куки.
 
-**Аутентификация vs авторизация** — «кто ты?» (проверка логина/пароля → выдача сессии) против «что тебе можно?» (401 без сессии, 403 для чужой услуги). В коде: `require_user` (аутентификация) и `ensure_owner` (авторизация).
+**Аутентификация и авторизация** — «кто ты?» (проверка логина и пароля, выдача сессии) и «что тебе можно?» (401 без сессии, 403 для чужой услуги).
 
-**SSO (Single Sign On)** — единый вход: после одной аутентификации пользователь получает доступ ко множеству сервисов (Kerberos, SAML, OAuth2/OIDC, общие сессии на домене). Наш сервис — один домен, но принцип тот же: одна сессия = один вход.
+**SSO** — единый вход: одна аутентификация даёт доступ к нескольким сервисам (OAuth 2.0 / OpenID Connect, SAML, Kerberos).
 
-**Двухфакторная аутентификация (2FA)** — второй фактор помимо пароля: код из SMS/приложения (TOTP), hardware-ключ. Даже украденный пароль не даёт входа без второго фактора. Может комбинироваться с JWT/сессиями.
+**Двухфакторная аутентификация** — кроме пароля нужен второй фактор: код из SMS или приложения (TOTP), аппаратный ключ. Украденного пароля недостаточно для входа.
 
-**RSA** — асимметричный алгоритм: есть пара ключей (public/private). Используется в цифровых подписях (JWT подписывается приватным ключом, проверяется публичным), в TLS/SSH и для шифрования (публичный ключ шифрует, приватный расшифровывает).
+**RSA** — асимметричный алгоритм с парой ключей. Открытым ключом шифруют и проверяют подпись, закрытым — расшифровывают и подписывают. Используется в TLS/HTTPS, SSH и для подписи JWT (RS256).
 
 ---
 
 ## Заключение
 
-Реализовано:
+Вы реализовали:
 
-- ✅ сессионная аутентификация через HttpOnly-куку `sessionId`;
-- ✅ сессии в Redis с TTL и JSON-значением (виден пользователь);
-- ✅ register / login / logout с Swagger-описаниями;
-- ✅ модель доступа «без авторизации — только чтение, с авторизацией — методы создателя» (401/403/404/409);
-- ✅ автозаполнение `creator` из сессии при создании услуги;
-- ✅ Swagger с Authorize и описаниями всех методов;
-- ✅ Postman-коллекция с заголовком Cookie, гостевыми 401 и проверками (прогнана в newman).
+  ✅ сессионную аутентификацию через HttpOnly-куку `sessionId`,
+  ✅ хранение данных в PostgreSQL (SQLAlchemy),
+  ✅ хранение сессий в Redis,
+  ✅ HTML-страницы на Jinja2 с пользователем из сессии,
+  ✅ JSON API с тестированием в Swagger,
+  ✅ модель доступа «гость — чтение, создатель — свои услуги» и автоматическое заполнение `creator`.
 
 ### Полезные ссылки
 
-- [FastAPI — Authentication](https://fastapi.tiangolo.com/tutorial/security/)
-- [FastAPI — Using the Request directly / dependencies](https://fastapi.tiangolo.com/dependencies/dependencies-with-parameters/)
-- [redis-py (asyncio)](https://redis.readthedocs.io/en/stable/asyncio_client.html)
+- [FastAPI — Security](https://fastapi.tiangolo.com/tutorial/security/)
+- [FastAPI — Dependencies](https://fastapi.tiangolo.com/tutorial/dependencies/)
+- [FastAPI — Response Cookies](https://fastapi.tiangolo.com/advanced/response-cookies/)
+- [redis-py (asyncio)](https://redis.readthedocs.io/en/stable/examples/asyncio_examples.html)
 - [OWASP: Session Management Cheat Sheet](https://cheatsheetseries.owasp.org/cheatsheets/Session_Management_Cheat_Sheet.html)
-- [OWASP: Authentication Cheat Sheet](https://cheatsheetseries.owasp.org/cheatsheets/Authentication_Cheat_Sheet.html)
+- [Методические указания Redis](https://github.com/iu5git/Web/blob/main/tutorials/redis/README.md)

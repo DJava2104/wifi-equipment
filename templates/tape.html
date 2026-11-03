@@ -17,8 +17,8 @@
             <div class="feed-card">
 
                 <div class="feed-media">
-                    {% set img_src = router.image_url if router.image_url else '/static/img/default.svg' %}
-                    {% set video_src = router.video_url if router.video_url else '/static/img/default.mp4' %}
+                    {% set img_src = (router.image_url | media) if router.image_url else '/static/img/default.svg' %}
+                    {% set video_src = (router.video_url | media) if router.video_url else '/static/img/default.mp4' %}
                     <img class="feed-img"
                          src="{{ img_src }}"
                          alt="{{ router.title }}"

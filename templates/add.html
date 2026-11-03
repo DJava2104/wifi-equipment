@@ -18,7 +18,12 @@
         <main class="screen-scroll">
             {% if d.id_routers %}
             <form class="add-form" method="post" action="/publish">
-                <p class="section-label">Параметры устройства</p>
+                <div class="add-section upload-section">
+                    <label class="drop-zone"><img src="{{ d.image_url | media }}" alt="{{ d.title }}" style="max-height:200px;width:auto;object-fit:contain;border-radius:inherit"></label>
+                    <label class="drop-zone"><video src="{{ d.video_url | media }}" autoplay loop muted style="max-height:200px;width:auto;object-fit:contain;border-radius:inherit"></video></label>
+                </div>
+
+                <p class="section-label">{{ d.title }}</p>
 
                 <label class="field">
                     <span>Частота (ГГц)</span>
@@ -48,14 +53,14 @@
                 <button type="submit" class="btn">Опубликовать</button>
             </form>
             {% else %}
-            <form class="add-form" method="post" action="/add">
+            <form class="add-form" method="post" action="/add" enctype="multipart/form-data">
                 <div class="add-section upload-section">
                     <label class="drop-zone">
-                        <input type="file" accept="image/*">
+                        <input type="file" name="image" accept="image/*" required>
                         <span>📷<br>Фотография</span>
                     </label>
                     <label class="drop-zone">
-                        <input type="file" accept="video/*">
+                        <input type="file" name="video" accept="video/*" required>
                         <span>🎥<br>Видео</span>
                     </label>
                 </div>
