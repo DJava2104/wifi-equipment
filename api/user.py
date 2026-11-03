@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, Form, Response
+from fastapi import APIRouter, Depends, Form, HTTPException, status
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -16,7 +16,10 @@ async def register(
 ):
     existing = await db.execute(select(Users).where(Users.username == username))
     if existing.scalar_one_or_none() is not None:
-        return Response(status_code=500)
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="Пользователь с таким логином уже существует",
+        )
 
     user = Users(username=username, password=password)
     db.add(user)

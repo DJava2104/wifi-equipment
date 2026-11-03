@@ -1,6 +1,6 @@
 from datetime import datetime
 
-from fastapi import APIRouter, Depends, File, Form, Query, Response, UploadFile
+from fastapi import APIRouter, Depends, File, Form, HTTPException, Query, Response, UploadFile, status
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -92,7 +92,7 @@ async def get_router(
     )
     published = result.scalars().all()
     if not published:
-        return Response(status_code=404)
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Нет опубликованных услуг")
 
     if id_routers is None:
         idx = 0
@@ -102,7 +102,7 @@ async def get_router(
             None,
         )
         if idx is None:
-            return Response(status_code=404)
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Услуга не найдена")
 
     if go_next:
         idx = (idx + 1) % len(published)
@@ -130,7 +130,10 @@ async def create_router(
         .limit(1)
     )
     if existing.scalar_one_or_none() is not None:
-        return Response(status_code=500)
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="У пользователя уже есть черновик",
+        )
 
     image_url = upload_file(await image.read(), image.filename)
     video_url = upload_file(await video.read(), video.filename)
@@ -170,12 +173,18 @@ async def publish_router(
         select(Router).where(Router.id_routers == id_routers)
     )
     router = result.scalar_one_or_none()
-    if router is None:
-        return Response(status_code=404)
-    if router.status != DRAFT:
-        return Response(status_code=500)
+    if router is None or router.status == DELETED:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Услуга не найдена")
     if router.creator != current_user.USERNAME:
-        return Response(status_code=500)
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Услуга принадлежит другому пользователю",
+        )
+    if router.status != DRAFT:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail=f"Публикация возможна только из статуса «{DRAFT}»",
+        )
 
     router.description = description
     router.frequency = frequency
@@ -200,12 +209,13 @@ async def delete_router(
         select(Router).where(Router.id_routers == id_routers)
     )
     router = result.scalar_one_or_none()
-    if router is None:
-        return Response(status_code=404)
+    if router is None or router.status == DELETED:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Услуга не найдена")
     if router.creator != current_user.USERNAME:
-        return Response(status_code=500)
-    if router.status == DELETED:
-        return Response(status_code=404)
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Удалять можно только свои услуги",
+        )
 
     router.status = DELETED
     router.date_completed = datetime.now()
@@ -216,10 +226,21 @@ async def delete_router(
 @router.post("/router/{id_routers}")
 async def like_router(
     id_routers: int,
-    like: int = Form(...),
+    like: int = Form(..., ge=0, le=1, description="1 — поставить лайк, 0 — отменить"),
     db: AsyncSession = Depends(get_db),
 ):
     current_user = get_current_user()
+    result = await db.execute(
+        select(Router)
+        .where(Router.id_routers == id_routers)
+        .where(Router.status == PUBLISHED)
+    )
+    if result.scalar_one_or_none() is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Опубликованная услуга не найдена",
+        )
+
     existing = await db.execute(
         select(Likes)
         .where(Likes.id_user == current_user.USER_ID)

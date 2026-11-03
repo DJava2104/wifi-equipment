@@ -1,3 +1,4 @@
+from minio_client import file_url
 from models.routers import Router
 
 
@@ -10,8 +11,8 @@ def router_serializer(router: Router) -> dict:
         "band": router.band,
         "antennas": router.antennas,
         "frequency": router.frequency,
-        "image_url": router.image_url,
-        "video_url": router.video_url,
+        "image_url": file_url(router.image_url),
+        "video_url": file_url(router.video_url),
         "description": router.description,
         "status": router.status,
         "date_created": router.date_created,
