@@ -25,9 +25,9 @@ scripts:
       pm.test('Статус 200', () => pm.response.to.have.status(200));
       const data = pm.response.json();
       pm.test('Статус черновик', () => pm.expect(data.status).to.eql('черновик'));
-      pm.test('Имена файлов в БД — латиница (uuid.ext)', () => {
-        pm.expect(data.image_url).to.match(/^[a-z0-9]+\.[a-z0-9]+$/i);
-        pm.expect(data.video_url).to.match(/^[a-z0-9]+\.[a-z0-9]+$/i);
+      pm.test('Файлы в MinIO, имена — латиница (uuid.ext)', () => {
+        pm.expect(data.image_url).to.match(/[/][a-z0-9]+\.[a-z0-9]+$/i);
+        pm.expect(data.video_url).to.match(/[/][a-z0-9]+\.[a-z0-9]+$/i);
       });
       pm.environment.set('equipment_id', data.id_equipment);
       console.log('equipment_id =', data.id_equipment);
