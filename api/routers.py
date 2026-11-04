@@ -78,10 +78,11 @@ async def get_draft(db: AsyncSession = Depends(get_db)):
     return router_serializer(router)
 
 
+# Лента — один метод: без id_routers — первая опубликованная услуга,
+# с id_routers — указанная, next=true — следующая после неё по кругу
 @router.get("/router")
-@router.get("/router/{id_routers}")
 async def get_router(
-    id_routers: int | None = None,
+    id_routers: int | None = Query(None),
     go_next: bool = Query(False, alias="next"),
     db: AsyncSession = Depends(get_db),
 ):

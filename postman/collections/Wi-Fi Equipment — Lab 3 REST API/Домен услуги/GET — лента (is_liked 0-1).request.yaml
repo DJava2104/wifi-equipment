@@ -1,6 +1,6 @@
 $kind: http-request
 name: GET — лента (is_liked 0/1)
-description: "Лента: только опубликованные. Первое опубликованное устройство + like_count + is_liked (0/1 — лайкнул ли текущий пользователь). Циклический переход — GET /api/equipment/{id}?next=true (следующее после указанного)."
+description: "Лента: только опубликованные. Первое опубликованное устройство + like_count + is_liked (0/1 — лайкнул ли текущий пользователь). Тот же метод с параметрами ?id_routers={id}&next=true — следующее после указанного (по кругу)."
 url: "{{base_url}}/api/equipment"
 method: GET
 auth:

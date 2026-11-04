@@ -2,7 +2,7 @@
   "info": {
     "_postman_id": "wifi-router-api-0001",
     "name": "Wi-Fi Routers — Lab 3 REST API",
-    "description": "Коллекция из 11 запросов (FastAPI, все адреса с префиксом /api).\n\nДомен услуги (8 запросов) + Домен пользователя (3 метода).\n\nПеред прогонкой: docker compose up -d, alembic upgrade head, uvicorn main:app --reload.\nТекущий пользователь-создатель зафиксирован константой (singleton): USER_ID=1, USERNAME=user_0.\n\nВ запросе «POST Добавление» в полях image и video выберите файлы (тип File): postman/test.png и postman/test.mp4. Имена файлов (латиница, uuid) сохраняются в БД, сами файлы — в MinIO. id созданной услуги сохраняется в {{router_id}} и подхватывается запросами PUT/DELETE/like.",
+    "description": "Коллекция из 10 запросов (FastAPI, все адреса с префиксом /api).\n\nДомен услуги (7 методов) + Домен пользователя (3 метода).\n\nПеред прогонкой: docker compose up -d, alembic upgrade head, uvicorn main:app --reload.\nТекущий пользователь-создатель зафиксирован константой (singleton): USER_ID=1, USERNAME=user_0.\n\nВ запросе «POST Добавление» в полях image и video выберите файлы (тип File): postman/test.png и postman/test.mp4. Имена файлов (латиница, uuid) сохраняются в БД, сами файлы — в MinIO. id созданной услуги сохраняется в {{router_id}} и подхватывается запросами PUT/DELETE/like.",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
   },
   "variable": [
@@ -73,37 +73,7 @@
               "host": ["http://localhost:8000"],
               "path": ["api", "router"]
             },
-            "description": "Лента: только опубликованные. Первое опубликованное устройство + like_count + is_liked (0/1 — лайкнул ли текущий пользователь). Циклический переход — GET /api/router/{id}?next=true (следующее после указанного)."
-          }
-        },
-        {
-          "name": "GET — лента по ид (next=true)",
-          "event": [
-            {
-              "listen": "test",
-              "script": {
-                "exec": [
-                  "pm.test('Статус 200', () => pm.response.to.have.status(200));",
-                  "const data = pm.response.json();",
-                  "pm.test('Текущее опубликованное устройство', () => pm.expect(data).to.be.an('object'));",
-                  "pm.test('Признак is_liked (0/1)', () => pm.expect(data.is_liked).to.be.oneOf([0, 1]));",
-                  "pm.test('Счётчик лайков like_count', () => pm.expect(data).to.have.property('like_count'));"
-                ],
-                "type": "text/javascript"
-              }
-            }
-          ],
-          "request": {
-            "auth": { "type": "noauth" },
-            "method": "GET",
-            "header": [],
-            "url": {
-              "raw": "http://localhost:8000/api/router/1?next=true",
-              "host": ["http://localhost:8000"],
-              "path": ["api", "router", "1"],
-                "query": [{ "key": "next", "value": "true" }]
-            },
-            "description": "Лента: только опубликованные. Первое опубликованное устройство + like_count + is_liked (0/1 — лайкнул ли текущий пользователь). Циклический переход — GET /api/router/{id}?next=true (следующее после указанного)."
+            "description": "Лента: только опубликованные. Первое опубликованное устройство + like_count + is_liked (0/1 — лайкнул ли текущий пользователь). Тот же метод с параметрами ?id_routers={id}&next=true — следующее после указанного (по кругу)."
           }
         },
         {

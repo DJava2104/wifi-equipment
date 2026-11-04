@@ -43,15 +43,14 @@
 
 ## HTTP-методы
 
-Все адреса начинаются с `/api`.
+Все адреса начинаются с `/api`. Всего **10 методов**: 7 в домене устройства (услуги) и 3 в домене пользователя.
 
 ### Домен устройства
 
 | Метод | URL | Описание |
 |---|---|---|
 | GET | `/api/routers?freq_min=&freq_max=` | Список опубликованных с фильтрацией по частоте. Поле `is_creator` (0/1) — совпадает ли создатель с текущим пользователем |
-| GET | `/api/router?next=true` | Лента с начала: первое опубликованное + `like_count` + `is_liked` (0/1) |
-| GET | `/api/router/{id_routers}?next=true` | Лента по ид: устройство + `like_count` + `is_liked`. `next=true` — следующее после указанного (цикл) |
+| GET | `/api/router?id_routers=&next=` | Лента: без `id_routers` — первое опубликованное, с `id_routers` — указанное, `next=true` — следующее после указанного (по кругу). В ответе `like_count` и `is_liked` (0/1) |
 | GET | `/api/router/draft` | Черновик текущего пользователя (не более 1 записи) |
 | POST | `/api/router` | Создать черновик. Form: `title`, `image` (файл), `video` (файл) — обязательно; `frequency`, `max_speed`, `standard`, `antennas`, `description` — опционально. Файлы кладутся в MinIO, их имена (латиница, uuid) — в БД |
 | PUT | `/api/router/{id_routers}` | Опубликовать (только свой черновик). Form: `description`, `frequency`, `standard`, `max_speed`, `antennas` |
